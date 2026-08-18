@@ -3,6 +3,10 @@ import { claimDjIfVacant, fetchSettings, isCurrentDj } from "./roles.js";
 import { initPresence } from "./presence.js";
 import { delegateDj } from "./roles.js";
 import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
+import {
+  unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
+  djSetTrack, djPlay, djPause,
+} from "./player.js";
 
 function renderPresence(users, myUid, djUid) {
   const list = document.getElementById("presence-list");
@@ -64,8 +68,37 @@ async function bootstrap() {
     input.value = "";
   });
 
-  renderTracks(await fetchTracks());
-  subscribeTracks(renderTracks);
+  document.getElementById("listen-gate").classList.remove("hidden");
+  document.getElementById("listen-start").addEventListener("click", async () => {
+    await unlockAudio();
+    document.getElementById("listen-gate").classList.add("hidden");
+  });
+
+  let currentTracks = await fetchTracks();
+  renderTracks(currentTracks);
+  subscribeTracks((tracks) => { currentTracks = tracks; renderTracks(tracks); });
+
+  const applyState = async () => {
+    const state = await fetchPlaybackState();
+    await applyPlaybackState(state, currentTracks);
+  };
+  await applyState();
+  subscribePlaybackState(applyState);
+
+  if (amDj) {
+    document.getElementById("play-button").addEventListener("click", async () => {
+      const state = await fetchPlaybackState();
+      if (!state.current_track_id && currentTracks[0]) {
+        await djSetTrack(currentTracks[0].id);
+      } else {
+        await djPlay(state.position_at_start);
+      }
+    });
+    document.getElementById("pause-button").addEventListener("click", async () => {
+      const state = await fetchPlaybackState();
+      await djPause(state.position_at_start);
+    });
+  }
 }
 
 bootstrap();
