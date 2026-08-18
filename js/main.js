@@ -5,7 +5,7 @@ import { delegateDj } from "./roles.js";
 import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
-  djSetTrack, djPlay, djPause,
+  djSetTrack, djPlay, djPause, startDriftBroadcast,
 } from "./player.js";
 
 function renderPresence(users, myUid, djUid) {
@@ -84,6 +84,7 @@ async function bootstrap() {
   };
   await applyState();
   subscribePlaybackState(applyState);
+  startDriftBroadcast(amDj);
 
   if (amDj) {
     document.getElementById("play-button").addEventListener("click", async () => {

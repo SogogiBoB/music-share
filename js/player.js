@@ -10,15 +10,17 @@ let ytPlayer = null;
 let playerReadyResolve;
 const playerReady = new Promise((resolve) => { playerReadyResolve = resolve; });
 
-window.onYouTubeIframeAPIReady = function () {
-  ytPlayer = new YT.Player("youtube-player", {
-    height: "0",
-    width: "0",
-    events: {
-      onReady: () => playerReadyResolve(ytPlayer),
-    },
-  });
-};
+if (typeof window !== "undefined") {
+  window.onYouTubeIframeAPIReady = function () {
+    ytPlayer = new YT.Player("youtube-player", {
+      height: "0",
+      width: "0",
+      events: {
+        onReady: () => playerReadyResolve(ytPlayer),
+      },
+    });
+  };
+}
 
 export async function unlockAudio() {
   const player = await playerReady;
@@ -98,17 +100,31 @@ export async function applyPlaybackState(state, tracks) {
   else player.pauseVideo();
 }
 
-export function startDriftBroadcast(isDj, getState) {
+export function startDriftBroadcast(isDj) {
   const channel = supabase.channel("playback-drift");
-  channel.subscribe();
-  if (!isDj) return channel;
-  setInterval(async () => {
-    const player = await playerReady;
-    channel.send({
-      type: "broadcast",
-      event: "drift",
-      payload: { position: player.getCurrentTime() },
+
+  if (!isDj) {
+    channel.on("broadcast", { event: "drift" }, async ({ payload }) => {
+      const player = await playerReady;
+      const actual = player.getCurrentTime?.() ?? 0;
+      if (Math.abs(payload.position - actual) > 0.5) {
+        player.seekTo(payload.position, true);
+      }
     });
-  }, 5000);
+  }
+
+  channel.subscribe();
+
+  if (isDj) {
+    setInterval(async () => {
+      const player = await playerReady;
+      channel.send({
+        type: "broadcast",
+        event: "drift",
+        payload: { position: player.getCurrentTime() },
+      });
+    }, 5000);
+  }
+
   return channel;
 }
