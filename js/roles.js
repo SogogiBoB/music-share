@@ -6,6 +6,12 @@ export async function claimDjIfVacant(_uid) {
   return data === true;
 }
 
+export async function takeOverDj() {
+  const { data, error } = await supabase.rpc("takeover_dj");
+  if (error) throw error;
+  return data === true;
+}
+
 export async function delegateDj(targetUid) {
   const { data, error } = await supabase.rpc("delegate_dj", { target_uid: targetUid });
   if (error) throw error;
@@ -14,6 +20,12 @@ export async function delegateDj(targetUid) {
 
 export async function releaseDj() {
   const { data, error } = await supabase.rpc("release_dj");
+  if (error) throw error;
+  return data === true;
+}
+
+export async function heartbeatDj() {
+  const { data, error } = await supabase.rpc("heartbeat_dj");
   if (error) throw error;
   return data === true;
 }
@@ -38,8 +50,18 @@ export function isCurrentDj(settingsRow, uid) {
   return settingsRow?.dj_uid === uid;
 }
 
-export function canClaimDj(settingsRow, uid) {
-  return Boolean(uid) && settingsRow?.dj_uid === null;
+export function isDjLeaseExpired(settingsRow, nowMs = Date.now()) {
+  if (!settingsRow?.dj_uid) return false;
+  const expiresAtMs = Date.parse(settingsRow.dj_lease_expires_at ?? "");
+  return !Number.isFinite(expiresAtMs) || expiresAtMs <= nowMs;
+}
+
+export function canClaimDj(settingsRow, uid, nowMs = Date.now()) {
+  return Boolean(uid) && (!settingsRow?.dj_uid || isDjLeaseExpired(settingsRow, nowMs));
+}
+
+export function shouldNotifyDjTakeover(previousSettings, nextSettings, uid) {
+  return previousSettings?.dj_uid === uid && nextSettings?.dj_uid !== uid;
 }
 
 export async function fetchSettings() {

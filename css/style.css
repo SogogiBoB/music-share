@@ -571,6 +571,10 @@ button.track-main:hover {
   font-size: 18px;
 }
 
+.control-button-main[data-state="playing"] {
+  padding-left: 0;
+}
+
 .control-button-main:not(:disabled):hover {
   background: linear-gradient(145deg, #ee8bad, #c34f7b);
 }

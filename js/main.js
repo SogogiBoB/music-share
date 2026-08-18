@@ -1,13 +1,13 @@
 import { ensureIdentity } from "./auth.js?v=20260818-2";
 import {
-  claimDjIfVacant, fetchSettings, isCurrentDj, delegateDj,
-  releaseDj, fetchProfiles, subscribeSettings, canClaimDj,
+  takeOverDj, fetchSettings, isCurrentDj, delegateDj,
+  releaseDj, heartbeatDj, fetchProfiles, subscribeSettings, isDjLeaseExpired, shouldNotifyDjTakeover,
 } from "./roles.js";
 import { initPresence } from "./presence.js";
 import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
-  djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady,
+  djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady, getPlaybackTogglePresentation,
 } from "./player.js?v=20260818";
 
 function renderPresence(users, myUid, djUid, profileNicknames) {
@@ -136,11 +136,32 @@ function renderDjClaimAccess(settings, uid) {
   const button = document.getElementById("dj-claim-button");
   const status = document.getElementById("dj-claim-status");
   const amDj = isCurrentDj(settings, uid);
-  const canClaim = canClaimDj(settings, uid);
+  const leaseExpired = isDjLeaseExpired(settings);
 
-  button.classList.toggle("hidden", !canClaim);
+  button.classList.toggle("hidden", amDj);
   button.disabled = false;
-  status.textContent = amDj ? "현재 DJ입니다" : (canClaim ? "DJ 자리가 비어 있어요" : "DJ가 음악을 고르고 있어요");
+  status.textContent = amDj ? "현재 DJ입니다"
+    : (leaseExpired ? "이전 DJ 연결이 끊겼어요" : "DJ가 음악을 고르고 있어요");
+}
+
+function updatePlaybackToggle(isPlaying) {
+  const button = document.getElementById("play-button");
+  const { icon, label } = getPlaybackTogglePresentation(isPlaying);
+  button.setAttribute("aria-label", label);
+  button.dataset.state = isPlaying ? "playing" : "paused";
+  button.querySelector("span").textContent = icon;
+}
+
+function startDjHeartbeat() {
+  const heartbeat = async () => {
+    try {
+      const retained = await heartbeatDj();
+      if (!retained) location.reload();
+    } catch (err) {
+      console.error("DJ heartbeat failed", err);
+    }
+  };
+  window.setInterval(heartbeat, 15_000);
 }
 
 async function loadProfileNicknames() {
@@ -174,8 +195,15 @@ async function bootstrap() {
     },
   });
 
-  // dj_uid 가 바뀌면(위임/반납) 모든 탭이 새 역할로 다시 뜬다.
-  subscribeSettings(() => location.reload());
+  // heartbeat 는 만료 시각만 바꾸므로, 역할 UID가 바뀔 때만 화면을 새로 고친다.
+  subscribeSettings((payload) => {
+    if (payload.new?.dj_uid !== settings.dj_uid) {
+      if (shouldNotifyDjTakeover(settings, payload.new, identity.uid)) {
+        alert("다른 사용자가 DJ가 되었습니다. 이제 리스너로 함께 들어요.");
+      }
+      location.reload();
+    }
+  });
 
   document.getElementById("dj-claim-button").addEventListener("click", async () => {
     const button = document.getElementById("dj-claim-button");
@@ -183,10 +211,10 @@ async function bootstrap() {
     button.disabled = true;
     status.textContent = "DJ 권한을 요청하는 중…";
     try {
-      const claimed = await claimDjIfVacant(identity.uid);
-      if (!claimed) {
-        button.classList.add("hidden");
-        status.textContent = "다른 사람이 먼저 DJ가 되었어요.";
+      const tookOver = await takeOverDj();
+      if (!tookOver) {
+        renderDjClaimAccess(await fetchSettings(), identity.uid);
+        status.textContent = "DJ 권한을 가져오지 못했어요. 다시 시도해 주세요.";
         return;
       }
       status.textContent = "DJ 권한을 가져왔어요.";
@@ -203,6 +231,8 @@ async function bootstrap() {
   window.addEventListener("pagehide", () => {
     releaseDj().catch(() => {});
   });
+
+  if (amDj) startDjHeartbeat();
 
   document.getElementById("add-track-button").addEventListener("click", async () => {
     const input = document.getElementById("youtube-url-input");
@@ -244,9 +274,10 @@ async function bootstrap() {
   renderTracks(currentTracks, amDj);
   subscribeTracks((tracks) => { currentTracks = tracks; renderTracks(tracks, amDj); });
 
-  const applyState = async () => {
-    const state = await fetchPlaybackState();
-    await applyPlaybackState(state, currentTracks);
+  const applyState = async (state) => {
+    const nextState = state ?? await fetchPlaybackState();
+    updatePlaybackToggle(nextState.is_playing);
+    await applyPlaybackState(nextState, currentTracks);
   };
 
   document.getElementById("listen-gate").classList.remove("hidden");
@@ -277,15 +308,16 @@ async function bootstrap() {
   if (amDj) {
     document.getElementById("play-button").addEventListener("click", async () => {
       const state = await fetchPlaybackState();
-      if (!state.current_track_id && currentTracks[0]) {
+      if (state.is_playing) {
+        await djPause(state.position_at_start);
+        updatePlaybackToggle(false);
+      } else if (!state.current_track_id && currentTracks[0]) {
         await djSetTrack(currentTracks[0].id);
+        updatePlaybackToggle(true);
       } else {
         await djPlay(state.position_at_start);
+        updatePlaybackToggle(true);
       }
-    });
-    document.getElementById("pause-button").addEventListener("click", async () => {
-      const state = await fetchPlaybackState();
-      await djPause(state.position_at_start);
     });
     document.getElementById("next-button").addEventListener("click", async () => {
       const state = await fetchPlaybackState();

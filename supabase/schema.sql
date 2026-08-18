@@ -20,10 +20,11 @@ create policy "본인 프로필만 수정" on profiles
 create table settings (
   id int primary key default 1,
   dj_uid uuid references auth.users(id),
+  dj_lease_expires_at timestamptz,
   constraint singleton check (id = 1)
 );
 
-insert into settings (id, dj_uid) values (1, null);
+insert into settings (id, dj_uid, dj_lease_expires_at) values (1, null, null);
 
 alter table settings enable row level security;
 
@@ -37,7 +38,37 @@ security definer
 set search_path = public
 as $$
 begin
-  update settings set dj_uid = auth.uid() where id = 1 and dj_uid is null;
+  update settings
+    set dj_uid = auth.uid(), dj_lease_expires_at = now() + interval '45 seconds'
+    where id = 1 and (dj_uid is null or dj_lease_expires_at <= now());
+  return found;
+end;
+$$;
+
+create or replace function heartbeat_dj()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update settings
+    set dj_lease_expires_at = now() + interval '45 seconds'
+    where id = 1 and dj_uid = auth.uid();
+  return found;
+end;
+$$;
+
+create or replace function takeover_dj()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update settings
+    set dj_uid = auth.uid(), dj_lease_expires_at = now() + interval '45 seconds'
+    where id = 1;
   return found;
 end;
 $$;
@@ -49,7 +80,9 @@ security definer
 set search_path = public
 as $$
 begin
-  update settings set dj_uid = target_uid where id = 1 and dj_uid = auth.uid();
+  update settings
+    set dj_uid = target_uid, dj_lease_expires_at = now() + interval '45 seconds'
+    where id = 1 and dj_uid = auth.uid();
   return found;
 end;
 $$;
@@ -63,12 +96,16 @@ security definer
 set search_path = public
 as $$
 begin
-  update settings set dj_uid = null where id = 1 and dj_uid = auth.uid();
+  update settings
+    set dj_uid = null, dj_lease_expires_at = null
+    where id = 1 and dj_uid = auth.uid();
   return found;
 end;
 $$;
 
 grant execute on function claim_dj() to anon, authenticated;
+grant execute on function heartbeat_dj() to anon, authenticated;
+grant execute on function takeover_dj() to anon, authenticated;
 grant execute on function delegate_dj(uuid) to anon, authenticated;
 grant execute on function release_dj() to anon, authenticated;
 

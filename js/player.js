@@ -4,6 +4,12 @@ export function computeExpectedPosition({ isPlaying, positionAtStart, serverStar
   return positionAtStart + elapsedSec;
 }
 
+export function getPlaybackTogglePresentation(isPlaying) {
+  return isPlaying
+    ? { icon: "Ⅱ", label: "일시정지" }
+    : { icon: "▶", label: "재생" };
+}
+
 import { supabase } from "./supabaseClient.js";
 
 let ytPlayer = null;

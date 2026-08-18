@@ -107,6 +107,45 @@ test("YouTube API가 로딩 중이면 YT.ready 신호에서 플레이어 초기�
 test("DJ가 비어 있을 때만 리스너에게 DJ 되기 권한을 준다", () => {
   assert.equal(typeof roles.canClaimDj, "function");
   assert.equal(roles.canClaimDj({ dj_uid: null }, "listener-uid"), true);
-  assert.equal(roles.canClaimDj({ dj_uid: "dj-uid" }, "listener-uid"), false);
-  assert.equal(roles.canClaimDj({ dj_uid: "dj-uid" }, "dj-uid"), false);
+  const activeLease = { dj_uid: "dj-uid", dj_lease_expires_at: "2099-01-01T00:00:00.000Z" };
+  assert.equal(roles.canClaimDj(activeLease, "listener-uid"), false);
+  assert.equal(roles.canClaimDj(activeLease, "dj-uid"), false);
+});
+
+test("만료된 DJ 임대는 리스너가 회수할 수 있다", () => {
+  const now = Date.parse("2026-08-19T00:00:30.000Z");
+  assert.equal(typeof roles.isDjLeaseExpired, "function");
+  assert.equal(roles.isDjLeaseExpired({
+    dj_uid: "previous-dj",
+    dj_lease_expires_at: "2026-08-19T00:00:00.000Z",
+  }, now), true);
+  assert.equal(roles.canClaimDj({
+    dj_uid: "previous-dj",
+    dj_lease_expires_at: "2026-08-19T00:01:00.000Z",
+  }, "listener-uid", now), false);
+  assert.equal(roles.canClaimDj({
+    dj_uid: "previous-dj",
+    dj_lease_expires_at: "2026-08-19T00:00:00.000Z",
+  }, "listener-uid", now), true);
+});
+
+test("DJ를 빼앗긴 기존 DJ에게만 역할 전환 알림을 보낸다", () => {
+  assert.equal(typeof roles.shouldNotifyDjTakeover, "function");
+  const before = { dj_uid: "previous-dj" };
+  const after = { dj_uid: "new-dj" };
+  assert.equal(roles.shouldNotifyDjTakeover(before, after, "previous-dj"), true);
+  assert.equal(roles.shouldNotifyDjTakeover(before, after, "listener"), false);
+  assert.equal(roles.shouldNotifyDjTakeover(before, { dj_uid: "previous-dj" }, "previous-dj"), false);
+});
+
+test("재생 상태에 맞춰 중앙 제어 버튼의 아이콘과 레이블을 만든다", () => {
+  assert.equal(typeof player.getPlaybackTogglePresentation, "function");
+  assert.deepEqual(player.getPlaybackTogglePresentation(true), {
+    icon: "Ⅱ",
+    label: "일시정지",
+  });
+  assert.deepEqual(player.getPlaybackTogglePresentation(false), {
+    icon: "▶",
+    label: "재생",
+  });
 });
