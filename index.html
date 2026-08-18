@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Share</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="nickname-modal" class="modal">
+    <div class="modal-content">
+      <h2>닉네임을 입력하세요</h2>
+      <input id="nickname-input" type="text" maxlength="20" placeholder="닉네임">
+      <button id="nickname-submit">입장</button>
+    </div>
+  </div>
+
+  <div id="listen-gate" class="modal hidden">
+    <div class="modal-content">
+      <h2>듣기 시작</h2>
+      <p>브라우저 정책상 소리를 재생하려면 버튼을 눌러야 합니다.</p>
+      <button id="listen-start">듣기 시작</button>
+    </div>
+  </div>
+
+  <main id="app" class="hidden">
+    <section id="playlist-section">
+      <h2>재생목록</h2>
+      <div id="add-track-form" class="hidden">
+        <input id="youtube-url-input" type="text" placeholder="유튜브 링크">
+        <button id="add-track-button">추가</button>
+      </div>
+      <ul id="track-list"></ul>
+    </section>
+
+    <section id="controls-section" class="hidden">
+      <button id="play-button">재생</button>
+      <button id="pause-button">일시정지</button>
+      <button id="next-button">다음곡</button>
+    </section>
+
+    <section id="presence-section">
+      <h2>접속자</h2>
+      <ul id="presence-list"></ul>
+    </section>
+  </main>
+
+  <div id="youtube-player" style="display:none;"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
