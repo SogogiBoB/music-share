@@ -30,19 +30,32 @@ alter table settings enable row level security;
 create policy "누구나 settings 조회" on settings
   for select using (true);
 
-create policy "DJ 선점" on settings
-  for update using (
-    dj_uid is null
-  ) with check (
-    dj_uid = auth.uid()
-  );
+create or replace function claim_dj()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update settings set dj_uid = auth.uid() where id = 1 and dj_uid is null;
+  return found;
+end;
+$$;
 
-create policy "DJ 위임" on settings
-  for update using (
-    dj_uid = auth.uid()
-  ) with check (
-    true
-  );
+create or replace function delegate_dj(target_uid uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update settings set dj_uid = target_uid where id = 1 and dj_uid = auth.uid();
+  return found;
+end;
+$$;
+
+grant execute on function claim_dj() to anon, authenticated;
+grant execute on function delegate_dj(uuid) to anon, authenticated;
 
 -- tracks (재생목록)
 create table tracks (
