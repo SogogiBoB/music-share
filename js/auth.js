@@ -30,11 +30,16 @@ function promptNickname() {
     const input = document.getElementById("nickname-input");
     const button = document.getElementById("nickname-submit");
     modal.classList.remove("hidden");
+    // { once: true } 를 쓰면 빈 값으로 한 번 누른 순간 유일한 제출 수단이 사라진다.
+    // 성공 시 promise 가 이미 resolve 되고 모달도 감춰지므로 리스너를 남겨둬도 무해하다.
     button.addEventListener("click", () => {
       const value = input.value.trim();
       if (!value) return;
       modal.classList.add("hidden");
       resolve(value);
-    }, { once: true });
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") button.click();
+    });
   });
 }

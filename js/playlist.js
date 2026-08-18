@@ -25,7 +25,7 @@ export async function fetchYoutubeTitle(videoId) {
 }
 
 export async function fetchTracks() {
-  const { data, error } = await supabase.from("tracks").select().order("position");
+  const { data, error } = await supabase.from("tracks").select().order("position").order("id");
   if (error) throw error;
   return data;
 }

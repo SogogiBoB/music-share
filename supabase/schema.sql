@@ -54,8 +54,23 @@ begin
 end;
 $$;
 
+-- DJ 가 나가면 dj_uid 를 비워 다음 사람이 claim_dj() 로 이어받을 수 있게 한다.
+-- (탭이 정상 종료될 때만 호출되는 best-effort. 강제 종료/크래시는 커버하지 못한다.)
+create or replace function release_dj()
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update settings set dj_uid = null where id = 1 and dj_uid = auth.uid();
+  return found;
+end;
+$$;
+
 grant execute on function claim_dj() to anon, authenticated;
 grant execute on function delegate_dj(uuid) to anon, authenticated;
+grant execute on function release_dj() to anon, authenticated;
 
 -- tracks (재생목록)
 create table tracks (

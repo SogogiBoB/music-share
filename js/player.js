@@ -22,6 +22,15 @@ if (typeof window !== "undefined") {
   };
 }
 
+// YT IFrame API 스크립트가 차단되거나 CDN 이 죽으면 playerReady 는 영원히 pending 이다.
+// bootstrap 이 조용히 멈추는 대신 시간 초과로 실패시켜 호출부가 사용자에게 알릴 수 있게 한다.
+export async function waitForPlayerReady(timeoutMs = 15000) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("YouTube 플레이어 로딩 실패 (시간 초과)")), timeoutMs)
+  );
+  return Promise.race([playerReady, timeout]);
+}
+
 export async function unlockAudio() {
   const player = await playerReady;
   player.mute();
@@ -100,31 +109,23 @@ export async function applyPlaybackState(state, tracks) {
   else player.pauseVideo();
 }
 
-export function startDriftBroadcast(isDj) {
-  const channel = supabase.channel("playback-drift");
-
-  if (!isDj) {
-    channel.on("broadcast", { event: "drift" }, async ({ payload }) => {
-      const player = await playerReady;
-      const actual = player.getCurrentTime?.() ?? 0;
-      if (Math.abs(payload.position - actual) > 0.5) {
-        player.seekTo(payload.position, true);
-      }
+// 드리프트 보정은 RLS 로 보호되는 playback_state 를 주기적으로 폴링해서 수행한다.
+// Realtime Broadcast 채널은 인증이 없어 anon 키만 있으면 누구나 가짜 위치를 쏴서
+// 방 전체를 강제 seek 할 수 있으므로 사용하지 않는다.
+export function startDriftCorrection() {
+  setInterval(async () => {
+    const player = await playerReady;
+    if (!player.getCurrentTime) return;
+    const state = await fetchPlaybackState();
+    if (!state.is_playing) return;
+    const expected = computeExpectedPosition({
+      isPlaying: state.is_playing,
+      positionAtStart: state.position_at_start,
+      serverStartedAt: state.server_started_at,
     });
-  }
-
-  channel.subscribe();
-
-  if (isDj) {
-    setInterval(async () => {
-      const player = await playerReady;
-      channel.send({
-        type: "broadcast",
-        event: "drift",
-        payload: { position: player.getCurrentTime() },
-      });
-    }, 5000);
-  }
-
-  return channel;
+    const actual = player.getCurrentTime();
+    if (Math.abs(expected - actual) > 0.5) {
+      player.seekTo(expected, true);
+    }
+  }, 5000);
 }
