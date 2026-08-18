@@ -211,6 +211,37 @@ footer {
   letter-spacing: 0.08em;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dj-claim-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.button-dj-claim {
+  min-height: 36px;
+  margin: 0;
+  padding: 0 13px;
+  color: #fff;
+  background: linear-gradient(145deg, #ec84a8, #c95782);
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(201, 87, 130, 0.2);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.button-dj-claim:not(:disabled):hover {
+  background: linear-gradient(145deg, #ee8bad, #c34f7b);
+  transform: translateY(-1px);
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -776,6 +807,16 @@ footer span {
   .room-status {
     padding: 8px 10px;
     font-size: 9px;
+  }
+
+  .dj-claim-status {
+    display: none;
+  }
+
+  .button-dj-claim {
+    min-height: 34px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .hero-copy h1 {

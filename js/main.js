@@ -1,7 +1,7 @@
 import { ensureIdentity } from "./auth.js?v=20260818-2";
 import {
   claimDjIfVacant, fetchSettings, isCurrentDj, delegateDj,
-  releaseDj, fetchProfiles, subscribeSettings,
+  releaseDj, fetchProfiles, subscribeSettings, canClaimDj,
 } from "./roles.js";
 import { initPresence } from "./presence.js";
 import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
@@ -132,6 +132,17 @@ function renderTracks(tracks, amDj) {
   });
 }
 
+function renderDjClaimAccess(settings, uid) {
+  const button = document.getElementById("dj-claim-button");
+  const status = document.getElementById("dj-claim-status");
+  const amDj = isCurrentDj(settings, uid);
+  const canClaim = canClaimDj(settings, uid);
+
+  button.classList.toggle("hidden", !canClaim);
+  button.disabled = false;
+  status.textContent = amDj ? "현재 DJ입니다" : (canClaim ? "DJ 자리가 비어 있어요" : "DJ가 음악을 고르고 있어요");
+}
+
 async function loadProfileNicknames() {
   const profiles = await fetchProfiles();
   return Object.fromEntries(profiles.map((p) => [p.uid, p.nickname]));
@@ -139,11 +150,11 @@ async function loadProfileNicknames() {
 
 async function bootstrap() {
   const identity = await ensureIdentity();
-  await claimDjIfVacant(identity.uid);
   const settings = await fetchSettings();
   const amDj = isCurrentDj(settings, identity.uid);
   document.getElementById("controls-section").classList.toggle("hidden", !amDj);
   document.getElementById("add-track-form").classList.toggle("hidden", !amDj);
+  renderDjClaimAccess(settings, identity.uid);
   document.getElementById("app").classList.remove("hidden");
 
   let profileNicknames = await loadProfileNicknames();
@@ -165,6 +176,27 @@ async function bootstrap() {
 
   // dj_uid 가 바뀌면(위임/반납) 모든 탭이 새 역할로 다시 뜬다.
   subscribeSettings(() => location.reload());
+
+  document.getElementById("dj-claim-button").addEventListener("click", async () => {
+    const button = document.getElementById("dj-claim-button");
+    const status = document.getElementById("dj-claim-status");
+    button.disabled = true;
+    status.textContent = "DJ 권한을 요청하는 중…";
+    try {
+      const claimed = await claimDjIfVacant(identity.uid);
+      if (!claimed) {
+        button.classList.add("hidden");
+        status.textContent = "다른 사람이 먼저 DJ가 되었어요.";
+        return;
+      }
+      status.textContent = "DJ 권한을 가져왔어요.";
+      location.reload();
+    } catch (err) {
+      console.error(err);
+      button.disabled = false;
+      status.textContent = "DJ 권한을 가져오지 못했어요. 다시 시도해 주세요.";
+    }
+  });
 
   // DJ 가 탭을 닫으면 역할을 반납해 방이 영구히 DJ 없는 상태가 되지 않게 한다.
   // DJ 가 아니면 release_dj() 는 아무 것도 하지 않는다.

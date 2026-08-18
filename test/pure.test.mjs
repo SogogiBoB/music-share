@@ -4,6 +4,7 @@ import { parseYoutubeId } from "../js/playlist.js";
 import * as player from "../js/player.js";
 const { computeExpectedPosition } = player;
 import * as auth from "../js/auth.js";
+import * as roles from "../js/roles.js";
 
 test("스캐폴드 확인", () => {
   assert.equal(1 + 1, 2);
@@ -101,4 +102,11 @@ test("YouTube API가 로딩 중이면 YT.ready 신호에서 플레이어 초기�
   assert.equal(initialized, 0);
   readyCallback();
   assert.equal(initialized, 1);
+});
+
+test("DJ가 비어 있을 때만 리스너에게 DJ 되기 권한을 준다", () => {
+  assert.equal(typeof roles.canClaimDj, "function");
+  assert.equal(roles.canClaimDj({ dj_uid: null }, "listener-uid"), true);
+  assert.equal(roles.canClaimDj({ dj_uid: "dj-uid" }, "listener-uid"), false);
+  assert.equal(roles.canClaimDj({ dj_uid: "dj-uid" }, "dj-uid"), false);
 });

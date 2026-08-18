@@ -38,6 +38,10 @@ export function isCurrentDj(settingsRow, uid) {
   return settingsRow?.dj_uid === uid;
 }
 
+export function canClaimDj(settingsRow, uid) {
+  return Boolean(uid) && settingsRow?.dj_uid === null;
+}
+
 export async function fetchSettings() {
   const { data, error } = await supabase.from("settings").select().eq("id", 1).single();
   if (error) throw error;
