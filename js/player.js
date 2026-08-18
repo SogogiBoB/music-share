@@ -10,16 +10,54 @@ let ytPlayer = null;
 let playerReadyResolve;
 const playerReady = new Promise((resolve) => { playerReadyResolve = resolve; });
 
+export function initializeYouTubePlayer({ YT: youtubeApi, onReady } = {}) {
+  const api = youtubeApi ?? (typeof window !== "undefined" ? window.YT : undefined);
+  if (!api?.Player || ytPlayer) {
+    return false;
+  }
+
+  let createdPlayer;
+  createdPlayer = new api.Player("youtube-player", {
+    height: "0",
+    width: "0",
+    events: {
+      onReady: (event) => {
+        ytPlayer = event.target ?? createdPlayer;
+        playerReadyResolve(ytPlayer);
+        onReady?.(ytPlayer);
+      },
+    },
+  });
+  // YouTube API의 onReady는 보통 비동기로 오지만, 테스트/래퍼 구현은 즉시 호출할 수 있다.
+  // 즉시 호출된 경우 onReady에서 확정한 인스턴스를 덮어쓰지 않는다.
+  if (!ytPlayer) ytPlayer = createdPlayer;
+  return true;
+}
+
+export function whenYouTubeApiAvailable({ YT: youtubeApi, onAvailable } = {}) {
+  if (youtubeApi?.Player) {
+    onAvailable();
+    return true;
+  }
+  if (typeof youtubeApi?.ready === "function") {
+    youtubeApi.ready(() => {
+      onAvailable();
+    });
+    return true;
+  }
+  return false;
+}
+
 if (typeof window !== "undefined") {
   window.onYouTubeIframeAPIReady = function () {
-    ytPlayer = new YT.Player("youtube-player", {
-      height: "0",
-      width: "0",
-      events: {
-        onReady: () => playerReadyResolve(ytPlayer),
-      },
-    });
+    initializeYouTubePlayer();
   };
+  // iframe_api가 모듈보다 먼저 준비된 경우 콜백은 이미 지나간다.
+  // 이때도 즉시 생성해 playerReady가 영구 대기 상태가 되지 않게 한다.
+  whenYouTubeApiAvailable({
+    YT: window.YT,
+    onAvailable: () => initializeYouTubePlayer(),
+  });
 }
 
 // YT IFrame API 스크립트가 차단되거나 CDN 이 죽으면 playerReady 는 영원히 pending 이다.

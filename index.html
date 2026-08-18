@@ -3,52 +3,124 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Music Share</title>
+  <meta name="theme-color" content="#fff8fa">
+  <meta name="description" content="친구들과 같은 음악을 같은 순간에 듣는 실시간 음악 공유 공간">
+  <title>Sugar DJ · Music Share</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="nickname-modal" class="modal">
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+
+  <div id="nickname-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title">
     <div class="modal-content">
-      <h2>닉네임을 입력하세요</h2>
-      <input id="nickname-input" type="text" maxlength="20" placeholder="닉네임">
-      <button id="nickname-submit">입장</button>
+      <div class="brand-mark brand-mark-large" aria-hidden="true">♪</div>
+      <p class="eyebrow">WELCOME TO SUGAR DJ</p>
+      <h2 id="nickname-title">어떤 이름으로<br>함께 들을까요?</h2>
+      <p class="modal-description">친구들이 알아볼 수 있는 닉네임을 입력해 주세요.</p>
+      <label class="sr-only" for="nickname-input">닉네임</label>
+      <input id="nickname-input" type="text" maxlength="20" placeholder="닉네임을 입력하세요" autocomplete="nickname" aria-describedby="nickname-error" aria-invalid="false">
+      <p id="nickname-error" class="field-message error-message" role="alert"></p>
+      <button id="nickname-submit" class="button button-primary button-full" type="button">
+        음악방 입장하기 <span aria-hidden="true">→</span>
+      </button>
     </div>
   </div>
 
-  <div id="listen-gate" class="modal hidden">
-    <div class="modal-content">
-      <h2>듣기 시작</h2>
-      <p>브라우저 정책상 소리를 재생하려면 버튼을 눌러야 합니다.</p>
-      <button id="listen-start">듣기 시작</button>
+  <div id="listen-gate" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="listen-title">
+    <div class="modal-content modal-content-compact">
+      <div class="pulse-icon" aria-hidden="true"><span>♪</span></div>
+      <p class="eyebrow">READY TO LISTEN</p>
+      <h2 id="listen-title">같이 들을 준비가<br>됐나요?</h2>
+      <p class="modal-description">브라우저의 재생 정책에 따라 처음 한 번만 버튼을 눌러 주세요.</p>
+      <button id="listen-start" class="button button-primary button-full" type="button">
+        <span aria-hidden="true">▶</span> 듣기 시작
+      </button>
     </div>
   </div>
 
-  <main id="app" class="hidden">
-    <section id="playlist-section">
-      <h2>재생목록</h2>
-      <div id="add-track-form" class="hidden">
-        <input id="youtube-url-input" type="text" placeholder="유튜브 링크">
-        <button id="add-track-button">추가</button>
+  <main id="app" class="app-shell hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">♪</div>
+        <div>
+          <p class="brand-name">Sugar DJ</p>
+          <p class="brand-caption">music together</p>
+        </div>
       </div>
-      <ul id="track-list"></ul>
-    </section>
+      <div class="room-status" aria-label="음악방 연결됨">
+        <span class="status-dot" aria-hidden="true"></span>
+        LIVE ROOM
+      </div>
+    </header>
 
-    <section id="controls-section" class="hidden">
-      <button id="play-button">재생</button>
-      <button id="pause-button">일시정지</button>
-      <button id="next-button">다음곡</button>
-    </section>
+    <div class="hero-copy">
+      <p class="eyebrow">SHARED PLAYLIST</p>
+      <h1>같이 듣는 순간을<br><span>더 다정하게.</span></h1>
+      <p>유튜브 링크 하나로 모두가 같은 음악을 같은 순간에 들어요.</p>
+    </div>
 
-    <section id="presence-section">
-      <h2>접속자</h2>
-      <ul id="presence-list"></ul>
-    </section>
+    <div class="dashboard">
+      <section id="playlist-section" class="panel playlist-panel" aria-labelledby="playlist-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">NOW IN THE ROOM</p>
+            <h2 id="playlist-title">재생목록</h2>
+          </div>
+          <span class="section-icon" aria-hidden="true">♫</span>
+        </div>
+
+        <div id="add-track-form" class="add-track hidden">
+          <label class="sr-only" for="youtube-url-input">추가할 유튜브 링크</label>
+          <div class="input-action">
+            <input id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="유튜브 링크를 붙여넣으세요" aria-describedby="add-track-status">
+            <button id="add-track-button" class="button button-secondary" type="button">
+              <span aria-hidden="true">＋</span> 추가
+            </button>
+          </div>
+          <p id="add-track-status" class="field-message" role="status" aria-live="polite"></p>
+        </div>
+
+        <ul id="track-list" class="track-list" aria-live="polite"></ul>
+
+        <section id="controls-section" class="player-controls hidden" aria-label="재생 컨트롤">
+          <button id="pause-button" class="control-button" type="button" aria-label="일시정지">
+            <span aria-hidden="true">Ⅱ</span>
+          </button>
+          <button id="play-button" class="control-button control-button-main" type="button" aria-label="재생">
+            <span aria-hidden="true">▶</span>
+          </button>
+          <button id="next-button" class="control-button" type="button" aria-label="다음 곡">
+            <span aria-hidden="true">▶ı</span>
+          </button>
+        </section>
+      </section>
+
+      <section id="presence-section" class="panel presence-panel" aria-labelledby="presence-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">LISTENING TOGETHER</p>
+            <h2 id="presence-title">함께 듣는 사람</h2>
+          </div>
+          <span id="presence-count" class="member-count">0명</span>
+        </div>
+        <ul id="presence-list" class="presence-list" aria-live="polite"></ul>
+        <div class="room-note">
+          <span aria-hidden="true">♡</span>
+          이 방의 DJ가 음악을 고르고 재생을 함께 맞춰요.
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <span aria-hidden="true">♪</span> 좋은 음악은 함께 들을 때 더 좋아요.
+    </footer>
   </main>
 
-  <div id="youtube-player" style="display:none;"></div>
+  <div id="youtube-player" class="visually-hidden-player" aria-hidden="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=20260818-3"></script>
 </body>
 </html>

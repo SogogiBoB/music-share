@@ -1,4 +1,4 @@
-import { ensureIdentity } from "./auth.js";
+import { ensureIdentity } from "./auth.js?v=20260818-2";
 import {
   claimDjIfVacant, fetchSettings, isCurrentDj, delegateDj,
   releaseDj, fetchProfiles, subscribeSettings,
@@ -8,18 +8,36 @@ import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
   djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady,
-} from "./player.js";
+} from "./player.js?v=20260818";
 
 function renderPresence(users, myUid, djUid, profileNicknames) {
   const list = document.getElementById("presence-list");
+  const count = document.getElementById("presence-count");
   list.innerHTML = "";
+  count.textContent = `${users.length}명`;
   for (const u of users) {
     const li = document.createElement("li");
+    li.className = "member-item";
+    const nickname = String(profileNicknames[u.uid] ?? u.nickname ?? "게스트");
+
+    const avatar = document.createElement("span");
+    avatar.className = "member-avatar";
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.textContent = nickname.trim().charAt(0).toUpperCase() || "♪";
+    li.appendChild(avatar);
+
+    const copy = document.createElement("span");
+    copy.className = "member-copy";
     const label = document.createElement("span");
+    label.className = "member-name";
     // presence 메타데이터는 위조 가능하므로 profiles(RLS 보호) 의 닉네임을 우선한다.
     // 프로필 행이 아직 없는 순간에만 presence 값으로 폴백한다.
-    label.textContent = profileNicknames[u.uid] ?? u.nickname;
-    li.appendChild(label);
+    label.textContent = nickname;
+    const role = document.createElement("span");
+    role.className = "member-role";
+    role.textContent = u.uid === myUid ? "나" : "리스너";
+    copy.append(label, role);
+    li.appendChild(copy);
     if (u.uid === djUid) {
       const badge = document.createElement("span");
       badge.className = "badge-dj";
@@ -28,10 +46,19 @@ function renderPresence(users, myUid, djUid, profileNicknames) {
     }
     if (djUid === myUid && u.uid !== myUid) {
       const btn = document.createElement("button");
+      btn.className = "delegate-button";
+      btn.type = "button";
       btn.textContent = "DJ 위임";
       btn.addEventListener("click", async () => {
-        await delegateDj(u.uid);
-        location.reload();
+        btn.disabled = true;
+        try {
+          await delegateDj(u.uid);
+          location.reload();
+        } catch (err) {
+          btn.disabled = false;
+          console.error(err);
+          alert("DJ 역할을 위임하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        }
       });
       li.appendChild(btn);
     }
@@ -42,18 +69,67 @@ function renderPresence(users, myUid, djUid, profileNicknames) {
 function renderTracks(tracks, amDj) {
   const list = document.getElementById("track-list");
   list.innerHTML = "";
-  for (const t of tracks) {
+  if (!tracks.length) {
+    const empty = document.createElement("li");
+    empty.className = "empty-state";
+    empty.innerHTML = `
+      <span class="empty-state-icon" aria-hidden="true">♫</span>
+      <strong>아직 추가된 음악이 없어요</strong>
+      <span>${amDj ? "위에 유튜브 링크를 붙여 첫 곡을 추가해 보세요." : "DJ가 곧 첫 곡을 골라 줄 거예요."}</span>
+    `;
+    list.appendChild(empty);
+    return;
+  }
+
+  tracks.forEach((t, index) => {
     const li = document.createElement("li");
+    li.className = "track-item";
     li.dataset.trackId = t.id;
-    li.textContent = t.title;
+
+    const row = document.createElement(amDj ? "button" : "div");
+    row.className = "track-main";
     if (amDj) {
-      li.style.cursor = "pointer";
-      li.addEventListener("click", async () => {
-        await djSetTrack(t.id);
+      row.type = "button";
+      row.setAttribute("aria-label", `${t.title} 재생`);
+      row.addEventListener("click", async () => {
+        row.disabled = true;
+        try {
+          await djSetTrack(t.id);
+        } catch (err) {
+          console.error(err);
+          alert("곡을 재생하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        } finally {
+          row.disabled = false;
+        }
       });
     }
+
+    const number = document.createElement("span");
+    number.className = "track-number";
+    number.textContent = String(index + 1).padStart(2, "0");
+
+    const copy = document.createElement("span");
+    copy.className = "track-copy";
+    const title = document.createElement("span");
+    title.className = "track-title";
+    title.textContent = t.title;
+    const meta = document.createElement("span");
+    meta.className = "track-meta";
+    meta.textContent = amDj ? "눌러서 바로 재생" : "YouTube track";
+    copy.append(title, meta);
+    row.append(number, copy);
+
+    if (amDj) {
+      const cue = document.createElement("span");
+      cue.className = "track-cue";
+      cue.setAttribute("aria-hidden", "true");
+      cue.textContent = "▶";
+      row.appendChild(cue);
+    }
+
+    li.appendChild(row);
     list.appendChild(li);
-  }
+  });
 }
 
 async function loadProfileNicknames() {
@@ -98,9 +174,38 @@ async function bootstrap() {
 
   document.getElementById("add-track-button").addEventListener("click", async () => {
     const input = document.getElementById("youtube-url-input");
-    if (!input.value.trim()) return;
-    await addTrack({ url: input.value.trim(), uid: identity.uid });
-    input.value = "";
+    const button = document.getElementById("add-track-button");
+    const status = document.getElementById("add-track-status");
+    const url = input.value.trim();
+    status.className = "field-message";
+    if (!url) {
+      status.classList.add("is-error");
+      status.textContent = "추가할 유튜브 링크를 입력해 주세요.";
+      input.focus();
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "추가 중…";
+    status.textContent = "곡 정보를 확인하고 있어요.";
+    try {
+      await addTrack({ url, uid: identity.uid });
+      input.value = "";
+      status.classList.add("is-success");
+      status.textContent = "재생목록에 추가했어요.";
+    } catch (err) {
+      console.error(err);
+      status.classList.add("is-error");
+      status.textContent = err.message === "유효하지 않은 유튜브 링크"
+        ? "올바른 유튜브 링크를 입력해 주세요."
+        : "곡을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    } finally {
+      button.disabled = false;
+      button.innerHTML = '<span aria-hidden="true">＋</span> 추가';
+    }
+  });
+
+  document.getElementById("youtube-url-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") document.getElementById("add-track-button").click();
   });
 
   let currentTracks = await fetchTracks();
@@ -161,4 +266,20 @@ async function bootstrap() {
   }
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error(err);
+  document.getElementById("nickname-modal")?.classList.add("hidden");
+  document.getElementById("listen-gate")?.classList.add("hidden");
+  const app = document.getElementById("app");
+  app?.classList.remove("hidden");
+  if (app) {
+    app.innerHTML = `
+      <section class="panel startup-error" role="alert">
+        <span class="empty-state-icon" aria-hidden="true">!</span>
+        <h1>음악방에 연결하지 못했어요</h1>
+        <p>네트워크 연결을 확인한 뒤 페이지를 새로고침해 주세요.</p>
+        <button class="button button-primary" type="button" onclick="location.reload()">새로고침</button>
+      </section>
+    `;
+  }
+});
