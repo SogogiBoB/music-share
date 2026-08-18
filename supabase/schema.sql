@@ -30,9 +30,16 @@ alter table settings enable row level security;
 create policy "누구나 settings 조회" on settings
   for select using (true);
 
-create policy "DJ 선점 또는 위임만 허용" on settings
+create policy "DJ 선점" on settings
   for update using (
-    dj_uid is null or dj_uid = auth.uid()
+    dj_uid is null
+  ) with check (
+    dj_uid = auth.uid()
+  );
+
+create policy "DJ 위임" on settings
+  for update using (
+    dj_uid = auth.uid()
   ) with check (
     true
   );
