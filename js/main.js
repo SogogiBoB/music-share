@@ -2,6 +2,7 @@ import { ensureIdentity } from "./auth.js";
 import { claimDjIfVacant, fetchSettings, isCurrentDj } from "./roles.js";
 import { initPresence } from "./presence.js";
 import { delegateDj } from "./roles.js";
+import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
 
 function renderPresence(users, myUid, djUid) {
   const list = document.getElementById("presence-list");
@@ -30,6 +31,17 @@ function renderPresence(users, myUid, djUid) {
   }
 }
 
+function renderTracks(tracks) {
+  const list = document.getElementById("track-list");
+  list.innerHTML = "";
+  for (const t of tracks) {
+    const li = document.createElement("li");
+    li.dataset.trackId = t.id;
+    li.textContent = t.title;
+    list.appendChild(li);
+  }
+}
+
 async function bootstrap() {
   const identity = await ensureIdentity();
   await claimDjIfVacant(identity.uid);
@@ -44,6 +56,16 @@ async function bootstrap() {
     nickname: identity.nickname,
     onSync: (users) => renderPresence(users, identity.uid, settings.dj_uid),
   });
+
+  document.getElementById("add-track-button").addEventListener("click", async () => {
+    const input = document.getElementById("youtube-url-input");
+    if (!input.value.trim()) return;
+    await addTrack({ url: input.value.trim(), uid: identity.uid });
+    input.value = "";
+  });
+
+  renderTracks(await fetchTracks());
+  subscribeTracks(renderTracks);
 }
 
 bootstrap();
