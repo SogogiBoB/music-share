@@ -6,6 +6,7 @@ const { computeExpectedPosition } = player;
 import * as auth from "../js/auth.js";
 import * as roles from "../js/roles.js";
 import { hasDuplicateTrack, computeReorderedPositions, filterPlaylistsByQuery } from "../js/playlists.js";
+import * as playlists from "../js/playlists.js";
 import { parseYoutubeSearchResults } from "../js/youtubeSearch.js";
 
 test("스캐폴드 확인", () => {
@@ -516,4 +517,46 @@ test("computeSeekTarget: duration 을 아직 모르면 expected 를 그대로 �
   assert.equal(computeSeekTarget({ expected: 42, duration: 0 }), 42);
   assert.equal(computeSeekTarget({ expected: 42, duration: undefined }), 42);
   assert.equal(computeSeekTarget({ expected: -3, duration: 186 }), 0);
+});
+
+// ── 프로필 닉네임 결정 ─────────────────────────────────────────
+// ensureIdentity 가 매 로드마다 "게스트" 를 기본값으로 프로필에 덮어써서
+// 정회원까지 전원 게스트로 표시되던 문제를 막는다.
+const { deriveNickname } = auth;
+
+test("deriveNickname: 저장된 닉네임이 있으면 그대로 쓴다", () => {
+  assert.equal(deriveNickname({ storedNickname: "설탕", email: "a@b.com", isAnonymous: false }), "설탕");
+  assert.equal(deriveNickname({ storedNickname: "  설탕  ", email: "a@b.com" }), "설탕");
+});
+
+test("deriveNickname: 익명(게스트) 세션은 게스트로 표시한다", () => {
+  assert.equal(deriveNickname({ isAnonymous: true }), "게스트");
+  assert.equal(deriveNickname({ storedNickname: "게스트", isAnonymous: true }), "게스트");
+  assert.equal(deriveNickname({ storedNickname: "밤손님", isAnonymous: true }), "밤손님");
+});
+
+test("deriveNickname: 정회원인데 닉네임이 게스트 자리표시자면 이메일 아이디로 되살린다", () => {
+  assert.equal(deriveNickname({ storedNickname: "게스트", email: "sugar@dj.kr", isAnonymous: false }), "sugar");
+});
+
+test("deriveNickname: 저장된 닉네임이 없으면 이메일 아이디, 그것도 없으면 리스너", () => {
+  assert.equal(deriveNickname({ email: "sugar@dj.kr", isAnonymous: false }), "sugar");
+  assert.equal(deriveNickname({ email: "", isAnonymous: false }), "리스너");
+  assert.equal(deriveNickname({}), "리스너");
+});
+
+// ── 재생목록 셀렉트 동기화 ────────────────────────────────────
+// 방 화면의 "내 재생목록에서 대기열로" 셀렉트는 개수만 비교해서 다시 그렸기 때문에
+// 다른 탭에서 만든 재생목록이 화면에 나타나지 않았다.
+const { playlistOptionsChanged } = playlists;
+
+test("playlistOptionsChanged: 개수가 같아도 id 나 이름이 다르면 다시 그린다", () => {
+  assert.equal(playlistOptionsChanged([{ value: "1", label: "밤" }], [{ id: 1, name: "밤" }]), false);
+  assert.equal(playlistOptionsChanged([{ value: "1", label: "밤" }], [{ id: 2, name: "밤" }]), true);
+  assert.equal(playlistOptionsChanged([{ value: "1", label: "밤" }], [{ id: 1, name: "낮" }]), true);
+});
+
+test("playlistOptionsChanged: 개수가 다르면 다시 그린다", () => {
+  assert.equal(playlistOptionsChanged([], [{ id: 1, name: "밤" }]), true);
+  assert.equal(playlistOptionsChanged([{ value: "1", label: "밤" }], []), true);
 });

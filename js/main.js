@@ -7,7 +7,10 @@ import {
 } from "./roles.js";
 import { initPresence } from "./presence.js";
 import { addTrack, fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js";
-import { fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks, addTrackToPlaylist } from "./playlists.js";
+import {
+  fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks, addTrackToPlaylist,
+  playlistOptionsChanged,
+} from "./playlists.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
   djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady, getPlaybackTogglePresentation,

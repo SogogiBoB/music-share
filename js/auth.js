@@ -29,21 +29,43 @@ export function setNicknameModalVisibility(modal, visible) {
   modal.classList.toggle("hidden", !visible);
 }
 
+const GUEST_PLACEHOLDER = "게스트";
+
+// 표시용 닉네임을 정한다. 저장된 닉네임이 최우선이고, 정회원인데 값이 "게스트"
+// 자리표시자로 남아 있으면(예전 로직이 덮어쓴 흔적) 이메일 아이디로 되살린다.
+export function deriveNickname({ storedNickname, email, isAnonymous } = {}) {
+  const stored = String(storedNickname ?? "").trim();
+  if (stored && !(stored === GUEST_PLACEHOLDER && !isAnonymous)) return stored;
+  if (isAnonymous) return GUEST_PLACEHOLDER;
+  const local = String(email ?? "").split("@")[0].trim();
+  return local || "리스너";
+}
+
 export async function ensureIdentity() {
   const { data: { session } } = await supabase.auth.getSession();
   if (session?.user) {
     const uid = session.user.id;
+    const isAnonymous = session.user.is_anonymous === true || !session.user.email;
     const { data: profile } = await supabase.from("profiles").select().eq("uid", uid).single();
     setNicknameModalVisibility(document.getElementById("nickname-modal"), false);
-    const identity = {
-      uid,
-      nickname: profile?.nickname ?? "게스트",
-      isGuest: profile?.is_guest ?? false,
-      fromPrompt: false,
-    };
-    // 게스트 세션은 is_guest 를 덮어쓰지 않도록 nickname 만 갱신한다.
-    await supabase.from("profiles").upsert({ uid, nickname: identity.nickname });
-    return identity;
+
+    const nickname = deriveNickname({
+      storedNickname: profile?.nickname,
+      email: session.user.email,
+      isAnonymous,
+    });
+    const isGuest = profile?.is_guest ?? isAnonymous;
+
+    // 매 로드마다 무조건 쓰면 자리표시자가 실제 닉네임을 지운다. 값이 달라질 때만 쓴다.
+    // 기존 행을 갱신할 때는 is_guest 를 보내지 않는다("본인 프로필만 수정" 정책이
+    // is_guest 변경을 막고, 보내지 않으면 기존 값이 유지된다).
+    if (!profile) {
+      await supabase.from("profiles").insert({ uid, nickname, is_guest: isGuest });
+    } else if (profile.nickname !== nickname) {
+      await supabase.from("profiles").update({ nickname }).eq("uid", uid);
+    }
+
+    return { uid, nickname, isGuest, fromPrompt: false };
   }
   const result = await promptAuth();
   return { isGuest: false, fromPrompt: true, ...result };
@@ -107,8 +129,19 @@ function promptAuth() {
         });
         if (error) throw error;
         const { data: profile } = await supabase.from("profiles").select().eq("uid", data.user.id).single();
+        const nickname = deriveNickname({
+          storedNickname: profile?.nickname,
+          email: data.user.email,
+          isAnonymous: false,
+        });
+        // 프로필 행이 없는 계정(구버전 가입자)도 게스트로 굳지 않게 여기서 만들어 둔다.
+        if (!profile) {
+          await supabase.from("profiles").insert({ uid: data.user.id, nickname, is_guest: false });
+        } else if (profile.nickname !== nickname) {
+          await supabase.from("profiles").update({ nickname }).eq("uid", data.user.id);
+        }
         setNicknameModalVisibility(modal, false);
-        resolve({ uid: data.user.id, nickname: profile?.nickname ?? "게스트", isGuest: profile?.is_guest ?? false });
+        resolve({ uid: data.user.id, nickname, isGuest: profile?.is_guest ?? false });
       } catch (err) {
         loginError.textContent = "이메일 또는 비밀번호가 올바르지 않아요.";
       } finally {

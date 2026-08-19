@@ -28,6 +28,15 @@ export function filterPlaylistsByQuery(playlistsWithTracks, query) {
   );
 }
 
+// 셀렉트 옵션을 다시 그려야 하는지 판단한다. 개수만 비교하면 다른 탭에서 만든
+// 재생목록이 개수가 같은 경우(이름 변경·삭제+생성) 화면에 반영되지 않는다.
+export function playlistOptionsChanged(currentOptions, playlists) {
+  if (currentOptions.length !== playlists.length) return true;
+  return playlists.some((p, index) =>
+    String(p.id) !== String(currentOptions[index].value) || p.name !== currentOptions[index].label
+  );
+}
+
 export async function fetchPlaylists(ownerUid) {
   const { data, error } = await supabase
     .from("playlists")
