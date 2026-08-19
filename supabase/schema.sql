@@ -2,6 +2,7 @@
 create table profiles (
   uid uuid primary key references auth.users(id),
   nickname text not null,
+  is_guest boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -13,14 +14,28 @@ create policy "누구나 프로필 조회" on profiles
 create policy "본인 프로필만 생성" on profiles
   for insert with check (auth.uid() = uid);
 
+create or replace function public.is_guest_uid(u uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce((select is_guest from profiles where uid = u), false);
+$$;
+
+grant execute on function public.is_guest_uid(uuid) to anon, authenticated;
+
 create policy "본인 프로필만 수정" on profiles
-  for update using (auth.uid() = uid);
+  for update using (auth.uid() = uid)
+  with check (auth.uid() = uid and is_guest = public.is_guest_uid(auth.uid()));
 
 -- settings (싱글턴, 현재 DJ)
 create table settings (
   id int primary key default 1,
   dj_uid uuid references auth.users(id),
   dj_lease_expires_at timestamptz,
+  master_volume int not null default 100,
   constraint singleton check (id = 1)
 );
 
@@ -38,6 +53,9 @@ security definer
 set search_path = public
 as $$
 begin
+  if public.is_guest_uid(auth.uid()) then
+    return false;
+  end if;
   update settings
     set dj_uid = auth.uid(), dj_lease_expires_at = now() + interval '45 seconds'
     where id = 1 and (dj_uid is null or dj_lease_expires_at <= now());
@@ -66,6 +84,9 @@ security definer
 set search_path = public
 as $$
 begin
+  if public.is_guest_uid(auth.uid()) then
+    return false;
+  end if;
   update settings
     set dj_uid = auth.uid(), dj_lease_expires_at = now() + interval '45 seconds'
     where id = 1;
@@ -80,6 +101,9 @@ security definer
 set search_path = public
 as $$
 begin
+  if public.is_guest_uid(target_uid) then
+    return false;
+  end if;
   update settings
     set dj_uid = target_uid, dj_lease_expires_at = now() + interval '45 seconds'
     where id = 1 and dj_uid = auth.uid();
@@ -103,11 +127,29 @@ begin
 end;
 $$;
 
+create or replace function set_master_volume(v int)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if v < 0 or v > 100 then
+    return false;
+  end if;
+  update settings
+    set master_volume = v
+    where id = 1 and dj_uid = auth.uid();
+  return found;
+end;
+$$;
+
 grant execute on function claim_dj() to anon, authenticated;
 grant execute on function heartbeat_dj() to anon, authenticated;
 grant execute on function takeover_dj() to anon, authenticated;
 grant execute on function delegate_dj(uuid) to anon, authenticated;
 grant execute on function release_dj() to anon, authenticated;
+grant execute on function set_master_volume(int) to anon, authenticated;
 
 -- tracks (재생목록)
 create table tracks (
@@ -130,10 +172,15 @@ create policy "DJ만 트랙 추가" on tracks
     and exists (select 1 from settings where dj_uid = auth.uid())
   );
 
+create policy "DJ만 트랙 삭제" on tracks
+  for delete using (
+    exists (select 1 from settings where dj_uid = auth.uid())
+  );
+
 -- playback_state (싱글턴, 현재 재생 상태)
 create table playback_state (
   id int primary key default 1,
-  current_track_id bigint references tracks(id),
+  current_track_id bigint references tracks(id) on delete set null,
   is_playing boolean not null default false,
   position_at_start numeric not null default 0,
   server_started_at timestamptz not null default now(),
@@ -152,7 +199,91 @@ create policy "DJ만 재생상태 변경" on playback_state
     exists (select 1 from settings where dj_uid = auth.uid())
   );
 
+-- DJ 클라이언트 시계가 어긋나면 server_started_at 을 신뢰할 수 없다.
+-- 재생을 시작/재개할 때는 항상 DB 서버 시각으로 강제 고정한다.
+create or replace function public.stamp_server_started_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.is_playing then
+    new.server_started_at := now();
+  end if;
+  return new;
+end;
+$$;
+
+create trigger playback_state_stamp_server_started_at
+  before update on playback_state
+  for each row
+  execute function public.stamp_server_started_at();
+
+-- 리스너가 자신의 로컬 시계와 서버 시계의 오프셋을 계산할 수 있게 하는 시간 소스.
+create or replace function public.server_time_ms()
+returns bigint
+language sql
+stable
+as $$
+  select (extract(epoch from clock_timestamp()) * 1000)::bigint;
+$$;
+
+grant execute on function public.server_time_ms() to anon, authenticated;
+
 -- Realtime 활성화
 alter publication supabase_realtime add table tracks;
 alter publication supabase_realtime add table playback_state;
 alter publication supabase_realtime add table settings;
+
+-- 유저별 개인 재생목록 (공유 재생큐와 완전 분리)
+create table playlists (
+  id bigint generated always as identity primary key,
+  owner_uid uuid not null references auth.users(id),
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table playlists enable row level security;
+
+create policy "본인 재생목록만 조회" on playlists
+  for select using (owner_uid = auth.uid() and not public.is_guest_uid(auth.uid()));
+
+create policy "본인 재생목록만 생성" on playlists
+  for insert with check (owner_uid = auth.uid() and not public.is_guest_uid(auth.uid()));
+
+create policy "본인 재생목록만 수정" on playlists
+  for update using (owner_uid = auth.uid());
+
+create policy "본인 재생목록만 삭제" on playlists
+  for delete using (owner_uid = auth.uid());
+
+create table playlist_tracks (
+  id bigint generated always as identity primary key,
+  playlist_id bigint not null references playlists(id) on delete cascade,
+  youtube_id text not null,
+  title text not null,
+  position int not null,
+  created_at timestamptz not null default now(),
+  unique (playlist_id, youtube_id)
+);
+
+alter table playlist_tracks enable row level security;
+
+create policy "본인 재생목록의 곡만 조회" on playlist_tracks
+  for select using (
+    exists (select 1 from playlists where id = playlist_id and owner_uid = auth.uid())
+  );
+
+create policy "본인 재생목록의 곡만 추가" on playlist_tracks
+  for insert with check (
+    exists (select 1 from playlists where id = playlist_id and owner_uid = auth.uid())
+  );
+
+create policy "본인 재생목록의 곡만 수정" on playlist_tracks
+  for update using (
+    exists (select 1 from playlists where id = playlist_id and owner_uid = auth.uid())
+  );
+
+create policy "본인 재생목록의 곡만 삭제" on playlist_tracks
+  for delete using (
+    exists (select 1 from playlists where id = playlist_id and owner_uid = auth.uid())
+  );

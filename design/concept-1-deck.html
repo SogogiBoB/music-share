@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시안 1 · DECK 01 — Sugar DJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --chassis:#b8b5ac;
+  --chassis-hi:#c9c6bd;
+  --chassis-lo:#94918a;
+  --face:#e5e3dc;
+  --face-lo:#d5d2ca;
+  --lcd:#0f1410;
+  --screen:#9ed46a;
+  --screen-dim:#5c7a42;
+  --signal:#ff5c00;
+  --ink:#191815;
+  --muted:#6d6a62;
+  --seam:rgba(25,24,21,.28);
+  --font-d:"Archivo",system-ui,sans-serif;
+  --font-m:"DM Mono",ui-monospace,monospace;
+  --font-b:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;padding:0;min-height:100vh;color:var(--ink);
+  font-family:var(--font-b);line-height:1.5;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 2px,transparent 2px 9px),
+    linear-gradient(180deg,var(--chassis-hi),var(--chassis) 40%,var(--chassis-lo));
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none}
+button:not(:disabled){cursor:pointer}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+ul{margin:0;padding:0;list-style:none}
+h1,h2,h3{margin:0;font-family:var(--font-d);font-weight:600;letter-spacing:-.01em}
+
+/* ---- 시안 미리보기 전용 크롬 ---------------------------------------- */
+.mock-bar{
+  position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:10px;
+  align-items:center;padding:10px 18px;
+  background:#191815;color:#cfcdc6;
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+}
+.mock-bar b{color:var(--signal);font-weight:500}
+.mock-bar .sp{flex:1}
+.mock-bar button{
+  padding:6px 12px;border:1px solid #3d3b36;color:#cfcdc6;
+  font-family:var(--font-m);font-size:11px;letter-spacing:.12em;
+}
+.mock-bar button[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:#191815}
+
+/* ---- 랙 / 패널 공통 -------------------------------------------------- */
+.rack{max-width:1120px;margin:0 auto;padding:26px 18px 60px}
+.panel{
+  position:relative;background:var(--face);
+  border:1px solid var(--seam);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 1px 0 rgba(0,0,0,.14);
+}
+.panel + .panel{margin-top:14px}
+.panel::before,.panel::after{
+  content:"";position:absolute;top:7px;width:5px;height:5px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#f2f0ea,#8d8a83);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);
+}
+.panel::before{left:7px}
+.panel::after{right:7px}
+.panel-label{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 20px;border-bottom:1px solid var(--seam);
+  background:var(--face-lo);
+  font-family:var(--font-m);font-size:10.5px;letter-spacing:.22em;text-transform:lowercase;color:var(--muted);
+}
+.panel-label .code{margin-left:auto;color:var(--ink);opacity:.55}
+.panel-body{padding:18px 20px}
+
+/* ---- 톱 레일 --------------------------------------------------------- */
+.rail{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 20px;
+}
+.rail .brand{font-family:var(--font-d);font-size:17px;font-weight:700;letter-spacing:-.02em;text-transform:lowercase}
+.rail .brand em{font-style:normal;color:var(--muted);font-weight:400}
+.rail .sp{flex:1}
+.lamp{
+  display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--font-m);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);
+}
+.lamp i{
+  width:9px;height:9px;border-radius:50%;background:var(--signal);
+  box-shadow:0 0 0 1px rgba(0,0,0,.25),0 0 9px 1px rgba(255,92,0,.75);
+  animation:pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse{50%{opacity:.45}}
+.key{
+  padding:8px 14px;border:1px solid var(--seam);background:linear-gradient(180deg,#f0eee8,#dcd9d2);
+  font-family:var(--font-m);font-size:11px;letter-spacing:.1em;
+  box-shadow:0 2px 0 var(--chassis-lo);
+}
+.key:hover:not(:disabled){background:linear-gradient(180deg,#f6f4ef,#e4e1da)}
+.key:active{transform:translateY(2px);box-shadow:none}
+.key-signal{background:var(--signal);border-color:#c04600;color:#1a0d00;box-shadow:0 2px 0 #a13b00}
+.key-signal:hover:not(:disabled){background:#ff7526}
+
+/* ---- 탭 -------------------------------------------------------------- */
+.tabs{display:flex;gap:0;padding:0 20px;border-bottom:1px solid var(--seam);background:var(--face-lo)}
+.tabs button{
+  padding:12px 18px;margin-bottom:-1px;border-bottom:2px solid transparent;
+  font-family:var(--font-m);font-size:12px;letter-spacing:.06em;color:var(--muted);
+}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--signal)}
+
+/* ---- LCD 시그니처 ---------------------------------------------------- */
+.deck{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:0}
+.lcd{
+  position:relative;overflow:hidden;padding:20px;
+  background:
+    repeating-linear-gradient(0deg,rgba(158,212,106,.05) 0 1px,transparent 1px 3px),
+    radial-gradient(120% 140% at 20% 0%,#1a231a,var(--lcd) 70%);
+  border-right:1px solid var(--seam);
+  color:var(--screen);font-family:var(--font-m);
+}
+.lcd .row1{display:flex;gap:12px;font-size:10.5px;letter-spacing:.24em;color:var(--screen-dim);text-transform:uppercase}
+.lcd .row1 .on{color:var(--screen)}
+.lcd .marquee{margin:12px 0 4px}
+.lcd .marquee span{display:block;font-size:clamp(19px,2.6vw,26px);line-height:1.15;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lcd .by{font-size:12px;color:var(--screen-dim);letter-spacing:.05em}
+.lcd .time{display:flex;justify-content:space-between;margin-top:16px;font-size:12px;letter-spacing:.1em}
+.ruler{position:relative;height:26px;margin-top:6px;border-top:1px solid rgba(158,212,106,.3)}
+.ruler .ticks{position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(158,212,106,.35) 0 1px,transparent 1px 12px)}
+.ruler .fill{position:absolute;top:0;left:0;height:7px;background:var(--screen);box-shadow:0 0 10px rgba(158,212,106,.6)}
+.ruler .head{position:absolute;top:-3px;width:2px;height:16px;background:var(--signal);box-shadow:0 0 8px var(--signal)}
+
+.transport{padding:20px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+.transport .hint{font-family:var(--font-m);font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.pads{display:flex;gap:10px}
+.pad{
+  width:64px;height:52px;display:grid;place-items:center;font-size:17px;
+  border:1px solid var(--seam);background:linear-gradient(180deg,#f0eee8,#d9d6cf);
+  box-shadow:0 3px 0 var(--chassis-lo);
+}
+.pad:active{transform:translateY(3px);box-shadow:none}
+.pad-main{background:linear-gradient(180deg,#2a2825,#191815);color:var(--screen);border-color:#0f0e0c;box-shadow:0 3px 0 #56534d}
+.meter{display:flex;gap:3px}
+.meter i{flex:1;height:9px;background:var(--face-lo);box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.meter i.on{background:var(--screen)}
+.meter i.hot{background:var(--signal)}
+
+/* ---- 채널(참여자) ---------------------------------------------------- */
+.channels{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+.chan{
+  display:flex;align-items:center;gap:10px;padding:9px 11px;
+  border:1px solid var(--seam);background:linear-gradient(180deg,#efedE7,#e0ddd6);
+}
+.chan .sq{
+  width:32px;height:32px;display:grid;place-items:center;flex:none;
+  background:var(--lcd);color:var(--screen);font-family:var(--font-m);font-size:13px;
+}
+.chan .nm{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chan .rl{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.chan.is-dj{border-color:var(--signal);box-shadow:inset 0 0 0 1px rgba(255,92,0,.35)}
+.chan .djlamp{margin-left:auto;width:8px;height:8px;flex:none;border-radius:50%;background:var(--signal);box-shadow:0 0 7px var(--signal)}
+.chan .assign{margin-left:auto;padding:4px 7px;border:1px solid var(--seam);font-family:var(--font-m);font-size:10px;letter-spacing:.08em}
+
+/* ---- 큐 -------------------------------------------------------------- */
+.addrow{display:flex;gap:8px;margin-bottom:14px}
+.field{
+  flex:1;min-width:0;min-height:42px;padding:0 12px;
+  border:1px solid var(--seam);background:#faf9f5;
+  font-family:var(--font-b);font-size:14px;
+}
+.field::placeholder{color:#a4a199}
+.field:focus{outline:none;border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.note{margin:8px 0 0;font-family:var(--font-m);font-size:11px;letter-spacing:.05em;color:var(--muted)}
+.note.ok{color:#2f6b3d}
+.note.err{color:#b3300f}
+
+.strip{display:flex;align-items:center;gap:14px;padding:11px 12px;border-bottom:1px solid rgba(25,24,21,.12)}
+.strip:first-child{border-top:1px solid rgba(25,24,21,.12)}
+.strip .no{font-family:var(--font-m);font-size:12px;color:var(--muted);width:22px;flex:none}
+.strip .tt{flex:1;min-width:0;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.strip .lv{display:flex;gap:2px;width:78px;flex:none}
+.strip .lv i{flex:1;height:14px;background:rgba(25,24,21,.1)}
+.strip .cue{
+  padding:5px 9px;border:1px solid var(--seam);background:#f2f0ea;
+  font-family:var(--font-m);font-size:11px;letter-spacing:.06em;flex:none;
+}
+.strip .rm{width:28px;height:28px;flex:none;border:1px solid transparent;color:var(--muted);font-size:15px}
+.strip .rm:hover{border-color:var(--seam);color:#b3300f}
+.strip.is-live{background:linear-gradient(90deg,rgba(255,92,0,.12),transparent 70%)}
+.strip.is-live .no{color:var(--signal)}
+.strip.is-live .tt{font-weight:700}
+.strip.is-live .lv i{background:var(--screen)}
+.strip.is-live .lv i:nth-child(n+7){background:var(--signal)}
+
+/* ---- 라이브러리(내 재생목록) ---------------------------------------- */
+.lib{display:grid;grid-template-columns:minmax(0,270px) minmax(0,1fr);gap:0}
+.lib-side{border-right:1px solid var(--seam)}
+.lib-side-body{padding:16px 18px 22px}
+.lib-main{padding:18px 20px 24px}
+.bank{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid transparent;text-align:left;width:100%}
+.bank:hover{border-color:var(--seam);background:#efece6}
+.bank.is-on{border-color:var(--ink);background:#efece6}
+.bank .bk{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.bank .bn{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank .bc{font-family:var(--font-m);font-size:11px;color:var(--muted)}
+.bank-acts{display:flex;gap:6px;padding:0 10px 10px}
+.bank-acts button{font-family:var(--font-m);font-size:10px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--seam)}
+.bank-acts button:hover{color:var(--ink)}
+.results li + li{margin-top:6px}
+.results button{
+  display:block;width:100%;text-align:left;padding:10px 12px;
+  border:1px solid var(--seam);background:#faf9f5;font-size:13.5px;
+}
+.results button:hover{background:#efece6}
+.move{margin-top:12px;min-height:38px;padding:0 10px;border:1px solid var(--seam);background:#faf9f5;font-size:13px}
+
+/* ---- 로그인 ---------------------------------------------------------- */
+.gate{max-width:520px;margin:60px auto}
+.gate .panel-body{padding:24px 24px 26px}
+.gate h2{font-size:22px;margin-bottom:4px}
+.gate p.sub{margin:0 0 20px;font-size:13.5px;color:var(--muted)}
+.lab{display:block;margin:14px 0 5px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.gate .key{width:100%;margin-top:20px;padding:13px;text-align:center}
+.gate-tabs{display:flex;border:1px solid var(--seam);margin-bottom:4px}
+.gate-tabs button{flex:1;padding:10px;font-family:var(--font-m);font-size:12px;letter-spacing:.08em;color:var(--muted)}
+.gate-tabs button[aria-selected="true"]{background:var(--ink);color:var(--face)}
+.gate-tabs button + button{border-left:1px solid var(--seam)}
+
+footer{
+  max-width:1120px;margin:0 auto;padding:22px 18px 40px;
+  font-family:var(--font-m);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+}
+.screen{display:none}
+.screen.is-on{display:block}
+@media (max-width:880px){
+  .deck,.lib{grid-template-columns:1fr}
+  .lcd{border-right:0;border-bottom:1px solid var(--seam)}
+  .lib-side{border-right:0;border-bottom:1px solid var(--seam)}
+  .strip .lv{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <b>시안 1</b><span>deck 01 · 하드웨어 콘솔</span><span class="sp"></span>
+  <button type="button" data-go="room" aria-pressed="true">함께 듣기</button>
+  <button type="button" data-go="lib" aria-pressed="false">내 재생목록</button>
+  <button type="button" data-go="gate" aria-pressed="false">로그인</button>
+</div>
+
+<!-- ================= 함께 듣기 ================= -->
+<div class="screen is-on" id="s-room">
+<div class="rack">
+
+  <section class="panel">
+    <div class="rail">
+      <span class="brand">sugar dj <em>— deck 01</em></span>
+      <span class="lamp"><i></i> on air</span>
+      <span class="sp"></span>
+      <span class="lamp">현재 DJ · 준현</span>
+      <button class="key key-signal" type="button">DJ 되기</button>
+      <button class="key" type="button">로그아웃</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" type="button">함께 듣기</button>
+      <button role="tab" aria-selected="false" type="button" data-go="lib">내 재생목록</button>
+    </nav>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">now playing<span class="code">ch–01 / sync ±0.2s</span></div>
+    <div class="deck">
+      <div class="lcd">
+        <div class="row1"><span class="on">▶ play</span><span>sync lock</span><span>listeners 05</span></div>
+        <div class="marquee"><span>새소년 — 난춤 (Live)</span></div>
+        <p class="by">DJ 준현이 고른 곡 · 모두 같은 지점에서 듣는 중</p>
+        <div class="time"><span>03:12</span><span>-01:29</span></div>
+        <div class="ruler">
+          <div class="ticks"></div>
+          <div class="fill" style="width:68%"></div>
+          <div class="head" style="left:68%"></div>
+        </div>
+      </div>
+      <div class="transport">
+        <span class="hint">transport — DJ 전용</span>
+        <div class="pads">
+          <button class="pad pad-main" type="button" aria-label="일시정지">❙❙</button>
+          <button class="pad" type="button" aria-label="다음 곡">▶❙</button>
+        </div>
+        <span class="hint">output level</span>
+        <div class="meter">
+          <i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+          <i class="on"></i><i class="on"></i><i class="hot"></i><i></i><i></i>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">channels — 함께 듣는 중<span class="code">05 connected</span></div>
+    <div class="panel-body">
+      <ul class="channels">
+        <li class="chan is-dj"><span class="sq">준</span><span><span class="nm">준현</span><span class="rl">나 · dj</span></span><i class="djlamp" aria-label="DJ"></i></li>
+        <li class="chan"><span class="sq">민</span><span><span class="nm">민지</span><span class="rl">리스너</span></span><button class="assign" type="button">DJ 위임</button></li>
+        <li class="chan"><span class="sq">태</span><span><span class="nm">태오</span><span class="rl">리스너</span></span><button class="assign" type="button">DJ 위임</button></li>
+        <li class="chan"><span class="sq">서</span><span><span class="nm">서윤</span><span class="rl">리스너</span></span><button class="assign" type="button">DJ 위임</button></li>
+        <li class="chan"><span class="sq">하</span><span><span class="nm">하람</span><span class="rl">리스너</span></span><button class="assign" type="button">DJ 위임</button></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">queue<span class="code">07 tracks</span></div>
+    <div class="panel-body">
+      <div class="addrow">
+        <input class="field" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="추가할 유튜브 링크">
+        <button class="key" type="button">추가</button>
+      </div>
+      <p class="note ok">재생목록에 추가했어요.</p>
+      <ul style="margin-top:14px">
+        <li class="strip is-live"><span class="no">03</span><span class="tt">새소년 — 난춤 (Live)</span><span class="lv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="cue">재생 중</span><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">04</span><button class="tt" type="button">검정치마 — Everything</button><span class="lv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">05</span><button class="tt" type="button">실리카겔 — NO PAIN</button><span class="lv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">06</span><button class="tt" type="button">Tom Misch — Movie</button><span class="lv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">07</span><button class="tt" type="button">혁오 — TOMBOY</button><span class="lv"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>이 방의 DJ가 곡을 고르고 재생 위치를 맞춥니다 · sugar dj</footer>
+</div>
+</div>
+
+<!-- ================= 내 재생목록 ================= -->
+<div class="screen" id="s-lib">
+<div class="rack">
+  <section class="panel">
+    <div class="rail">
+      <span class="brand">sugar dj <em>— library</em></span>
+      <span class="sp"></span>
+      <button class="key" type="button">로그아웃</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="false" type="button" data-go="room">함께 듣기</button>
+      <button role="tab" aria-selected="true" type="button">내 재생목록</button>
+    </nav>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">search<span class="code">곡 제목으로 전체 재생목록 검색</span></div>
+    <div class="panel-body">
+      <div class="addrow">
+        <input class="field" type="text" placeholder="곡 제목으로 재생목록 검색" aria-label="곡 제목으로 재생목록 검색">
+        <button class="key" type="button">검색</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="lib">
+      <div class="lib-side">
+        <div class="panel-label">banks<span class="code">04</span></div>
+        <div class="lib-side-body">
+        <div class="addrow">
+          <input class="field" type="text" placeholder="새 재생목록 이름" maxlength="40" aria-label="새 재생목록 이름">
+          <button class="key" type="button">＋</button>
+        </div>
+        <ul>
+          <li><button class="bank is-on" type="button"><span class="bk">a</span><span class="bn">새벽 드라이브</span><span class="bc">12</span></button>
+            <div class="bank-acts"><button type="button">이름변경</button><button type="button">삭제</button></div></li>
+          <li><button class="bank" type="button"><span class="bk">b</span><span class="bn">집중용 로파이</span><span class="bc">31</span></button></li>
+          <li><button class="bank" type="button"><span class="bk">c</span><span class="bn">주말 파티</span><span class="bc">08</span></button></li>
+          <li><button class="bank" type="button"><span class="bk">d</span><span class="bn">혼자 듣는 밤</span><span class="bc">19</span></button></li>
+        </ul>
+        </div>
+      </div>
+
+      <div class="lib-main">
+        <h2 style="font-size:19px">새벽 드라이브</h2>
+        <p class="note">12곡 · 마지막 수정 8월 19일</p>
+
+        <span class="lab">유튜브 링크로 추가</span>
+        <div class="addrow"><input class="field" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="유튜브 링크로 추가"><button class="key" type="button">추가</button></div>
+
+        <span class="lab">유튜브 검색으로 추가</span>
+        <div class="addrow"><input class="field" type="text" placeholder="검색할 곡 제목" aria-label="유튜브 검색"><button class="key" type="button">검색</button></div>
+        <ul class="results">
+          <li><button type="button">아이유 — 밤편지</button></li>
+          <li><button type="button">잔나비 — 주저하는 연인들을 위해</button></li>
+        </ul>
+
+        <ul style="margin-top:18px">
+          <li class="strip"><span class="no">01</span><span class="tt">검정치마 — Everything</span><button class="rm" type="button" aria-label="삭제">×</button></li>
+          <li class="strip"><span class="no">02</span><span class="tt">새소년 — 난춤 (Live)</span><button class="rm" type="button" aria-label="삭제">×</button></li>
+          <li class="strip"><span class="no">03</span><span class="tt">Men I Trust — Show Me How</span><button class="rm" type="button" aria-label="삭제">×</button></li>
+        </ul>
+
+        <select class="move" aria-label="다른 재생목록으로 이동">
+          <option>다른 재생목록으로 이동</option>
+          <option>집중용 로파이</option>
+          <option>주말 파티</option>
+        </select>
+      </div>
+    </div>
+  </section>
+  <footer>sugar dj — library</footer>
+</div>
+</div>
+
+<!-- ================= 로그인 ================= -->
+<div class="screen" id="s-gate">
+<div class="rack">
+  <div class="gate">
+    <section class="panel">
+      <div class="panel-label">access<span class="code">sugar dj — deck 01</span></div>
+      <div class="panel-body">
+        <div class="gate-tabs" role="tablist">
+          <button role="tab" aria-selected="true" type="button">로그인</button>
+          <button role="tab" aria-selected="false" type="button">회원가입</button>
+        </div>
+        <h2 style="margin-top:20px">전원을 켜고 들어오세요</h2>
+        <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
+        <span class="lab">email</span>
+        <input class="field" type="email" placeholder="이메일" style="width:100%">
+        <span class="lab">password</span>
+        <input class="field" type="password" placeholder="비밀번호" style="width:100%">
+        <p class="note err" style="margin-top:10px">이메일 또는 비밀번호를 확인해 주세요.</p>
+        <button class="key key-signal" type="button">로그인</button>
+      </div>
+    </section>
+
+    <section class="panel" style="margin-top:22px">
+      <div class="panel-label">sound check<span class="code">브라우저 재생 정책</span></div>
+      <div class="panel-body">
+        <p style="margin:0 0 4px;font-size:14px">처음 한 번만 눌러 주세요.</p>
+        <p class="note">브라우저가 자동 재생을 막기 때문에 시작 버튼이 필요합니다.</p>
+        <button class="key" type="button" style="width:100%;margin-top:16px;padding:13px;text-align:center">듣기 시작</button>
+      </div>
+    </section>
+  </div>
+</div>
+</div>
+
+<script>
+const screens={room:document.getElementById("s-room"),lib:document.getElementById("s-lib"),gate:document.getElementById("s-gate")};
+function go(name){
+  Object.entries(screens).forEach(([k,el])=>el.classList.toggle("is-on",k===name));
+  document.querySelectorAll(".mock-bar [data-go]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.go===name)));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{location.hash=b.dataset.go;go(b.dataset.go)}));
+function fromHash(){const h=location.hash.slice(1);if(screens[h])go(h);}
+addEventListener("hashchange",fromHash);fromHash();
+</script>
+</body>
+</html>

@@ -1,52 +1,77 @@
-import { ensureIdentity } from "./auth.js?v=20260818-2";
+import { ensureIdentity, signOut } from "./auth.js?v=20260820";
+import { initPlaylistUI } from "./playlistUI.js?v=20260820";
 import {
   takeOverDj, fetchSettings, isCurrentDj, delegateDj,
   releaseDj, heartbeatDj, fetchProfiles, subscribeSettings, isDjLeaseExpired, shouldNotifyDjTakeover,
-} from "./roles.js";
-import { initPresence } from "./presence.js";
-import { addTrack, fetchTracks, subscribeTracks } from "./playlist.js";
+  getRoomViewState, canDelegateTo,
+} from "./roles.js?v=20260820";
+import { initPresence } from "./presence.js?v=20260820";
+import { addTrack, fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js?v=20260820";
+import { fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks } from "./playlists.js?v=20260820";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
   djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady, getPlaybackTogglePresentation,
-} from "./player.js?v=20260818";
+  startClockOffsetSync, startProgressBarUpdates, applyOutputVolume, formatClock,
+  computeExpectedPosition, computePrevTrackAction, nowMs,
+} from "./player.js?v=20260820-crt";
+import { computeOutputVolume, clampVolume, loadMyVolume, saveMyVolume, setMasterVolume } from "./volume.js?v=20260820";
 
-function renderPresence(users, myUid, djUid, profileNicknames) {
+function renderNowPlaying(tracks, currentTrackId) {
+  const track = tracks.find((t) => t.id === currentTrackId);
+  const nowTitle = document.getElementById("now-title");
+  const nowSub = document.getElementById("now-sub");
+  if (nowTitle) nowTitle.textContent = track ? track.title : "—";
+  if (nowSub) {
+    nowSub.textContent = track
+      ? "모두 같은 지점에서 듣는 중"
+      : "DJ가 곡을 고르는 중이에요";
+  }
+}
+
+function renderPresence(users, myUid, djUid, profiles) {
   const list = document.getElementById("presence-list");
   const count = document.getElementById("presence-count");
   list.innerHTML = "";
-  count.textContent = `${users.length}명`;
+  count.textContent = String(users.length);
   for (const u of users) {
-    const li = document.createElement("li");
-    li.className = "member-item";
-    const nickname = String(profileNicknames[u.uid] ?? u.nickname ?? "게스트");
+    const isDj = u.uid === djUid;
+    const profile = profiles[u.uid];
+    const nickname = String(profile?.nickname ?? u.nickname ?? "게스트");
 
-    const avatar = document.createElement("span");
-    avatar.className = "member-avatar";
-    avatar.setAttribute("aria-hidden", "true");
-    avatar.textContent = nickname.trim().charAt(0).toUpperCase() || "♪";
-    li.appendChild(avatar);
+    const li = document.createElement("li");
+    li.className = "preset";
+    if (isDj) li.classList.add("is-dj");
+    if (profile?.is_guest) li.classList.add("is-guest");
+
+    const top = document.createElement("div");
+    top.className = "preset-top";
+
+    const cap = document.createElement("span");
+    cap.className = "cap";
+    cap.setAttribute("aria-hidden", "true");
+    cap.textContent = nickname.trim().charAt(0).toUpperCase() || "♪";
 
     const copy = document.createElement("span");
-    copy.className = "member-copy";
-    const label = document.createElement("span");
-    label.className = "member-name";
-    // presence 메타데이터는 위조 가능하므로 profiles(RLS 보호) 의 닉네임을 우선한다.
-    // 프로필 행이 아직 없는 순간에만 presence 값으로 폴백한다.
-    label.textContent = nickname;
+    const name = document.createElement("span");
+    name.className = "nm";
+    name.textContent = nickname;
     const role = document.createElement("span");
-    role.className = "member-role";
-    role.textContent = u.uid === myUid ? "나" : "리스너";
-    copy.append(label, role);
-    li.appendChild(copy);
-    if (u.uid === djUid) {
-      const badge = document.createElement("span");
-      badge.className = "badge-dj";
-      badge.textContent = "DJ";
-      li.appendChild(badge);
+    role.className = "rl";
+    role.textContent = (u.uid === myUid ? "나 · " : "") + (isDj ? "dj" : profile?.is_guest ? "게스트" : "리스너");
+    copy.append(name, role);
+
+    top.append(cap, copy);
+
+    if (isDj) {
+      const lamp = document.createElement("i");
+      lamp.className = "lamp";
+      lamp.setAttribute("aria-label", "DJ");
+      top.appendChild(lamp);
     }
-    if (djUid === myUid && u.uid !== myUid) {
+
+    if (djUid === myUid && u.uid !== myUid && canDelegateTo(profile)) {
       const btn = document.createElement("button");
-      btn.className = "delegate-button";
+      btn.className = "assign";
       btn.type = "button";
       btn.textContent = "DJ 위임";
       btn.addEventListener("click", async () => {
@@ -60,14 +85,32 @@ function renderPresence(users, myUid, djUid, profileNicknames) {
           alert("DJ 역할을 위임하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         }
       });
-      li.appendChild(btn);
+      top.appendChild(btn);
     }
+
+    const vol = document.createElement("div");
+    vol.className = "preset-vol";
+    const sc = document.createElement("span");
+    sc.className = "sc";
+    const fill = document.createElement("i");
+    fill.style.width = `${u.muted ? 0 : (u.volume ?? 100)}%`;
+    sc.appendChild(fill);
+    const value = document.createElement("span");
+    value.className = "v";
+    value.textContent = u.muted ? "음소거" : (u.volume ?? 100);
+    vol.append(sc, value);
+    if (u.muted) li.classList.add("is-off");
+    if (u.uid === myUid) li.classList.add("is-me");
+    li.append(top, vol);
+
     list.appendChild(li);
   }
 }
 
-function renderTracks(tracks, amDj) {
+function renderTracks(tracks, amDj, currentTrackId) {
   const list = document.getElementById("track-list");
+  const queueCount = document.getElementById("queue-count");
+  if (queueCount) queueCount.textContent = String(tracks.length).padStart(2, "0");
   list.innerHTML = "";
   if (!tracks.length) {
     const empty = document.createElement("li");
@@ -82,12 +125,21 @@ function renderTracks(tracks, amDj) {
   }
 
   tracks.forEach((t, index) => {
+    const isLive = t.id === currentTrackId;
     const li = document.createElement("li");
-    li.className = "track-item";
+    li.className = "strip";
     li.dataset.trackId = t.id;
+    if (isLive) li.classList.add("is-live");
 
-    const row = document.createElement(amDj ? "button" : "div");
-    row.className = "track-main";
+    const number = document.createElement("span");
+    number.className = "no";
+    number.textContent = String(index + 1).padStart(2, "0");
+
+    const bulb = document.createElement("i");
+    bulb.className = "bulb";
+
+    const row = document.createElement(amDj ? "button" : "span");
+    row.className = "tt";
     if (amDj) {
       row.type = "button";
       row.setAttribute("aria-label", `${t.title} 재생`);
@@ -103,45 +155,72 @@ function renderTracks(tracks, amDj) {
         }
       });
     }
+    row.textContent = t.title;
 
-    const number = document.createElement("span");
-    number.className = "track-number";
-    number.textContent = String(index + 1).padStart(2, "0");
-
-    const copy = document.createElement("span");
-    copy.className = "track-copy";
-    const title = document.createElement("span");
-    title.className = "track-title";
-    title.textContent = t.title;
-    const meta = document.createElement("span");
-    meta.className = "track-meta";
-    meta.textContent = amDj ? "눌러서 바로 재생" : "YouTube track";
-    copy.append(title, meta);
-    row.append(number, copy);
+    li.append(number, bulb, row);
 
     if (amDj) {
-      const cue = document.createElement("span");
-      cue.className = "track-cue";
-      cue.setAttribute("aria-hidden", "true");
-      cue.textContent = "▶";
-      row.appendChild(cue);
+      const cue = document.createElement("button");
+      cue.type = "button";
+      cue.className = "cue";
+      cue.setAttribute("aria-label", `${t.title} 재생`);
+      cue.textContent = isLive ? "재생 중" : "cue";
+      cue.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        cue.disabled = true;
+        try {
+          await djSetTrack(t.id);
+        } catch (err) {
+          console.error(err);
+          alert("곡을 재생하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        } finally {
+          cue.disabled = false;
+        }
+      });
+      li.appendChild(cue);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "rm";
+      del.setAttribute("aria-label", `${t.title} 삭제`);
+      del.textContent = "×";
+      del.addEventListener("click", async (event) => {
+        event.stopPropagation();
+        if (!confirm(`"${t.title}"을(를) 재생목록에서 삭제할까요?`)) return;
+        del.disabled = true;
+        try {
+          await deleteTrack(t.id);
+        } catch (err) {
+          console.error(err);
+          alert("곡을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          del.disabled = false;
+        }
+      });
+      li.appendChild(del);
     }
 
-    li.appendChild(row);
     list.appendChild(li);
   });
 }
 
-function renderDjClaimAccess(settings, uid) {
+function renderRoomAccess(settings, identity) {
+  const view = getRoomViewState({ settingsRow: settings, uid: identity.uid, isGuest: identity.isGuest });
   const button = document.getElementById("dj-claim-button");
   const status = document.getElementById("dj-claim-status");
-  const amDj = isCurrentDj(settings, uid);
   const leaseExpired = isDjLeaseExpired(settings);
 
-  button.classList.toggle("hidden", amDj);
+  button.classList.toggle("hidden", !view.showClaimButton);
   button.disabled = false;
-  status.textContent = amDj ? "현재 DJ입니다"
+  document.getElementById("playlist-section").classList.toggle("hidden", !view.showQueuePanel);
+  document.getElementById("controls-section").classList.toggle("hidden", !view.showTransport);
+  document.getElementById("main-tab-playlists").classList.toggle("hidden", !view.showLibraryTab);
+  document.getElementById("listener-note").classList.toggle("hidden", view.amDj);
+
+  status.textContent = view.amDj ? "현재 DJ입니다"
+    : view.isGuest ? "게스트로 듣는 중이에요"
     : (leaseExpired ? "이전 DJ 연결이 끊겼어요" : "DJ가 음악을 고르고 있어요");
+
+  return view;
 }
 
 function updatePlaybackToggle(isPlaying) {
@@ -164,39 +243,152 @@ function startDjHeartbeat() {
   window.setInterval(heartbeat, 15_000);
 }
 
-async function loadProfileNicknames() {
+async function loadProfiles() {
   const profiles = await fetchProfiles();
-  return Object.fromEntries(profiles.map((p) => [p.uid, p.nickname]));
+  return Object.fromEntries(profiles.map((p) => [p.uid, p]));
 }
 
 async function bootstrap() {
   const identity = await ensureIdentity();
-  const settings = await fetchSettings();
-  const amDj = isCurrentDj(settings, identity.uid);
-  document.getElementById("controls-section").classList.toggle("hidden", !amDj);
+  let settings = await fetchSettings();
+  let amDj = isCurrentDj(settings, identity.uid);
   document.getElementById("add-track-form").classList.toggle("hidden", !amDj);
-  renderDjClaimAccess(settings, identity.uid);
+  let currentView = renderRoomAccess(settings, identity);
   document.getElementById("app").classList.remove("hidden");
 
-  let profileNicknames = await loadProfileNicknames();
+  let masterVolume = { value: settings.master_volume ?? 100, muted: false };
+  let myVolume = loadMyVolume();
 
-  initPresence({
+  const ARC = 235.6;
+  function updateKnobUI(containerId, value, muted, locked) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.classList.toggle("is-muted", muted);
+    if (locked !== undefined) el.classList.toggle("is-locked", locked);
+    const cap = el.querySelector(".vk-cap");
+    const arcFill = el.querySelector(".vk-arc-fill");
+    if (cap) cap.style.transform = `rotate(${-135 + 270 * value / 100}deg)`;
+    if (arcFill) arcFill.style.strokeDashoffset = String(ARC * (1 - (muted ? 0 : value) / 100));
+  }
+
+  function renderVolume(view) {
+    const out = computeOutputVolume({
+      master: masterVolume.value, mine: myVolume.value,
+      masterMuted: masterVolume.muted, myMuted: myVolume.muted,
+    });
+    applyOutputVolume(out);
+    document.getElementById("master-volume-num").textContent = masterVolume.muted ? "음소거" : masterVolume.value;
+    document.getElementById("my-volume-num").textContent = myVolume.muted ? "음소거" : myVolume.value;
+    document.getElementById("output-volume-num").textContent = out;
+    document.getElementById("output-volume-bar").style.width = `${out}%`;
+    document.getElementById("output-volume-calc").textContent =
+      `MASTER ${masterVolume.muted ? "MUTE" : masterVolume.value} × MY ${myVolume.muted ? "MUTE" : myVolume.value}`;
+
+    const masterInput = document.getElementById("master-volume-input");
+    masterInput.value = masterVolume.value;
+    masterInput.disabled = !view.amDj;
+    document.getElementById("master-volume-mute").disabled = !view.amDj;
+    document.getElementById("master-volume-tag").textContent =
+      view.amDj ? "DJ 전용 · 방 전체 기준" : "DJ만 조절 · 잠김";
+    document.getElementById("my-volume-input").value = myVolume.value;
+
+    updateKnobUI("master-volume", masterVolume.value, masterVolume.muted, !view.amDj);
+    updateKnobUI("my-volume", myVolume.value, myVolume.muted, false);
+  }
+
+  renderVolume(currentView);
+
+  let presenceChannel = null;
+
+  document.getElementById("my-volume-input").addEventListener("input", (e) => {
+    myVolume = { value: clampVolume(e.target.value), muted: false };
+    saveMyVolume(myVolume);
+    renderVolume(currentView);
+    presenceChannel?.track({ uid: identity.uid, nickname: identity.nickname, volume: myVolume.value, muted: myVolume.muted });
+  });
+  document.getElementById("my-volume-mute").addEventListener("click", () => {
+    myVolume = { ...myVolume, muted: !myVolume.muted };
+    saveMyVolume(myVolume);
+    renderVolume(currentView);
+    presenceChannel?.track({ uid: identity.uid, nickname: identity.nickname, volume: myVolume.value, muted: myVolume.muted });
+  });
+  document.getElementById("master-volume-input").addEventListener("input", (e) => {
+    masterVolume = { ...masterVolume, value: clampVolume(e.target.value), muted: false };
+    renderVolume(currentView);
+  });
+  document.getElementById("master-volume-input").addEventListener("change", async (e) => {
+    const next = clampVolume(e.target.value);
+    const status = document.getElementById("volume-status");
+    try {
+      const ok = await setMasterVolume(next);
+      if (!ok) {
+        // DJ 자격을 잃은 사이에 조작한 경우. 서버 값으로 되돌린다.
+        masterVolume = { value: (await fetchSettings()).master_volume ?? 100, muted: masterVolume.muted };
+        status.textContent = "마스터 볼륨을 저장하지 못했어요. DJ 권한을 확인해 주세요.";
+      } else {
+        masterVolume = { ...masterVolume, value: next };
+        status.textContent = "";
+      }
+    } catch (err) {
+      // RPC/컬럼이 아직 없는 등 서버 쪽 원인이면 내 화면만 바뀐 채 다른 사람에게는 전달되지 않는다.
+      // 조용히 실패해서 DJ가 "적용됐다"고 착각하지 않도록 반드시 알린다.
+      console.error(err);
+      masterVolume = { value: (await fetchSettings().catch(() => settings)).master_volume ?? masterVolume.value, muted: masterVolume.muted };
+      status.textContent = "마스터 볼륨이 서버에 저장되지 않았어요. 다른 사람에게는 적용되지 않습니다.";
+    }
+    renderVolume(currentView);
+  });
+  document.getElementById("master-volume-mute").addEventListener("click", () => {
+    masterVolume = { ...masterVolume, muted: !masterVolume.muted };
+    renderVolume(currentView);
+  });
+
+  document.getElementById("logout-button").addEventListener("click", async () => {
+    await signOut();
+    location.reload();
+  });
+
+  let playlistUIStarted = false;
+  function selectMainTab(which) {
+    const isRoom = which === "room";
+    document.getElementById("main-tab-room").setAttribute("aria-selected", String(isRoom));
+    document.getElementById("main-tab-playlists").setAttribute("aria-selected", String(!isRoom));
+    document.getElementById("room-view").classList.toggle("hidden", !isRoom);
+    document.getElementById("playlists-view").classList.toggle("hidden", isRoom);
+    if (!isRoom && !playlistUIStarted) {
+      playlistUIStarted = true;
+      initPlaylistUI({ ownerUid: identity.uid, amDj });
+    }
+  }
+  document.getElementById("main-tab-room").addEventListener("click", () => selectMainTab("room"));
+  document.getElementById("main-tab-playlists").addEventListener("click", () => selectMainTab("playlists"));
+
+  let profiles = await loadProfiles();
+
+  presenceChannel = initPresence({
     uid: identity.uid,
     nickname: identity.nickname,
+    getVolume: () => myVolume,
     onSync: async (users) => {
       // 새로 들어온 사람의 프로필을 반영하려면 sync 마다 다시 읽는다.
       // (subscribeTracks 가 변경마다 전체를 refetch 하는 것과 같은 패턴)
       try {
-        profileNicknames = await loadProfileNicknames();
+        profiles = await loadProfiles();
       } catch (err) {
         console.error(err);
       }
-      renderPresence(users, identity.uid, settings.dj_uid, profileNicknames);
+      renderPresence(users, identity.uid, settings.dj_uid, profiles);
     },
   });
 
+  let takingOverDj = false;
   // heartbeat 는 만료 시각만 바꾸므로, 역할 UID가 바뀔 때만 화면을 새로 고친다.
   subscribeSettings((payload) => {
+    if (payload.new?.master_volume !== undefined) {
+      masterVolume.value = payload.new.master_volume;
+      renderVolume(currentView);
+    }
+    if (takingOverDj && payload.new?.dj_uid === identity.uid) return;
     if (payload.new?.dj_uid !== settings.dj_uid) {
       if (shouldNotifyDjTakeover(settings, payload.new, identity.uid)) {
         alert("다른 사용자가 DJ가 되었습니다. 이제 리스너로 함께 들어요.");
@@ -211,15 +403,28 @@ async function bootstrap() {
     button.disabled = true;
     status.textContent = "DJ 권한을 요청하는 중…";
     try {
+      takingOverDj = true;
       const tookOver = await takeOverDj();
       if (!tookOver) {
-        renderDjClaimAccess(await fetchSettings(), identity.uid);
+        takingOverDj = false;
+        currentView = renderRoomAccess(await fetchSettings(), identity);
+        renderVolume(currentView);
         status.textContent = "DJ 권한을 가져오지 못했어요. 다시 시도해 주세요.";
         return;
       }
+      settings = { ...settings, dj_uid: identity.uid };
+      amDj = true;
+      document.getElementById("add-track-form").classList.remove("hidden");
+      currentView = renderRoomAccess(settings, identity);
+      renderVolume(currentView);
+      renderTracks(currentTracks, amDj, currentTrackId);
+      renderLibraryPicker().catch(console.error);
+      enableDjControls();
+      startDjHeartbeat();
+      await applyState();
       status.textContent = "DJ 권한을 가져왔어요.";
-      location.reload();
     } catch (err) {
+      takingOverDj = false;
       console.error(err);
       button.disabled = false;
       status.textContent = "DJ 권한을 가져오지 못했어요. 다시 시도해 주세요.";
@@ -239,9 +444,9 @@ async function bootstrap() {
     const button = document.getElementById("add-track-button");
     const status = document.getElementById("add-track-status");
     const url = input.value.trim();
-    status.className = "field-message";
+    status.className = "note";
     if (!url) {
-      status.classList.add("is-error");
+      status.classList.add("err");
       status.textContent = "추가할 유튜브 링크를 입력해 주세요.";
       input.focus();
       return;
@@ -252,17 +457,17 @@ async function bootstrap() {
     try {
       await addTrack({ url, uid: identity.uid });
       input.value = "";
-      status.classList.add("is-success");
+      status.classList.add("ok");
       status.textContent = "재생목록에 추가했어요.";
     } catch (err) {
       console.error(err);
-      status.classList.add("is-error");
+      status.classList.add("err");
       status.textContent = err.message === "유효하지 않은 유튜브 링크"
         ? "올바른 유튜브 링크를 입력해 주세요."
         : "곡을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.";
     } finally {
       button.disabled = false;
-      button.innerHTML = '<span aria-hidden="true">＋</span> 추가';
+      button.textContent = "추가";
     }
   });
 
@@ -271,23 +476,111 @@ async function bootstrap() {
   });
 
   let currentTracks = await fetchTracks();
-  renderTracks(currentTracks, amDj);
-  subscribeTracks((tracks) => { currentTracks = tracks; renderTracks(tracks, amDj); });
+  let currentTrackId = null;
+
+  async function renderLibraryPicker() {
+    if (identity.isGuest) return;
+    const select = document.getElementById("library-picker-select");
+    const list = document.getElementById("library-picker-list");
+    const note = document.getElementById("library-picker-note");
+    const allButton = document.getElementById("library-picker-all");
+    if (!select || !list || !note || !allButton) return;
+
+    const playlists = await fetchPlaylists(identity.uid);
+    if (select.options.length !== playlists.length) {
+      select.innerHTML = "";
+      playlists.forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = String(p.id);
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+    }
+    if (!playlists.length) {
+      note.textContent = "내 재생목록이 아직 없어요.";
+      list.innerHTML = "";
+      allButton.disabled = true;
+      return;
+    }
+
+    const libraryTracks = await fetchPlaylistTracks(Number(select.value || playlists[0].id));
+    const { addable, already } = partitionLibraryTracks(libraryTracks, currentTracks);
+
+    list.innerHTML = "";
+    libraryTracks.forEach((t, index) => {
+      const li = document.createElement("li");
+      const no = document.createElement("span");
+      no.className = "no";
+      no.textContent = String(index + 1).padStart(2, "0");
+      const title = document.createElement("span");
+      title.className = "tt";
+      title.textContent = t.title;
+      const button = document.createElement("button");
+      button.className = "key pick-add";
+      button.type = "button";
+      const isIn = already.some((x) => x.youtube_id === t.youtube_id);
+      button.textContent = isIn ? "대기열에 있음" : "＋ 대기열";
+      button.disabled = isIn;
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        try {
+          await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: identity.uid });
+        } catch (err) {
+          note.textContent = err.message;
+          button.disabled = false;
+          return;
+        }
+        currentTracks = await fetchTracks();
+        await renderLibraryPicker();
+      });
+      li.append(no, title, button);
+      list.appendChild(li);
+    });
+
+    const selectedOption = select.selectedOptions[0];
+    const playlistTitle = selectedOption ? selectedOption.textContent : "";
+    note.textContent = addable.length
+      ? `${playlistTitle} · 아직 대기열에 없는 곡 ${addable.length}개`
+      : `${playlistTitle} · 전부 대기열에 들어가 있어요`;
+    allButton.disabled = addable.length === 0;
+  }
+
+  document.getElementById("library-picker-select")?.addEventListener("change", renderLibraryPicker);
+  document.getElementById("library-picker-all")?.addEventListener("click", async () => {
+    const select = document.getElementById("library-picker-select");
+    if (!select?.value) return;
+    const list = await fetchPlaylistTracks(Number(select.value));
+    const { addable } = partitionLibraryTracks(list, currentTracks);
+    for (const t of addable) {
+      await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: identity.uid });
+    }
+    currentTracks = await fetchTracks();
+    await renderLibraryPicker();
+  });
+
+  renderTracks(currentTracks, amDj, currentTrackId);
+  renderNowPlaying(currentTracks, currentTrackId);
+  renderLibraryPicker().catch(console.error);
+  subscribeTracks((tracks) => {
+    currentTracks = tracks;
+    renderTracks(tracks, amDj, currentTrackId);
+    renderNowPlaying(tracks, currentTrackId);
+    renderLibraryPicker().catch(console.error);
+  });
 
   const applyState = async (state) => {
     const nextState = state ?? await fetchPlaybackState();
     updatePlaybackToggle(nextState.is_playing);
+    if (nextState.current_track_id !== currentTrackId) {
+      currentTrackId = nextState.current_track_id;
+      renderTracks(currentTracks, amDj, currentTrackId);
+      renderNowPlaying(currentTracks, currentTrackId);
+    }
     await applyPlaybackState(nextState, currentTracks);
   };
 
-  document.getElementById("listen-gate").classList.remove("hidden");
-  document.getElementById("listen-start").addEventListener("click", async () => {
-    await unlockAudio();
-    document.getElementById("listen-gate").classList.add("hidden");
-    // unlockAudio() 의 play/pause 로 플레이어가 멈춰 있으므로 실제 상태를 다시 적용한다.
-    // 이게 없으면 곡 중간에 들어온 사람은 영원히 무음이다.
-    await applyState();
-  });
+  const listenGate = document.getElementById("listen-gate");
+  const listenStart = document.getElementById("listen-start");
 
   let playerOk = true;
   try {
@@ -298,18 +591,68 @@ async function bootstrap() {
     alert("음악 플레이어를 불러오지 못했습니다. 새로고침해 주세요.");
   }
 
+  if (identity.fromPrompt) {
+    listenGate?.classList.add("hidden");
+    if (playerOk) {
+      await unlockAudio().catch(console.error);
+    }
+  } else {
+    listenGate?.classList.remove("hidden");
+    listenStart?.addEventListener("click", async () => {
+      listenStart.disabled = true;
+      try {
+        await unlockAudio();
+        listenGate.classList.add("hidden");
+        await applyState();
+      } catch (err) {
+        console.error(err);
+      } finally {
+        listenStart.disabled = false;
+      }
+    });
+  }
+
   if (playerOk) {
+    startClockOffsetSync();
     // 최초 1회: loadVideoById 로 영상을 물려두어야 unlockAudio() 의 play/pause 가 의미를 갖는다.
     await applyState();
     subscribePlaybackState(applyState);
     startDriftCorrection();
+    startProgressBarUpdates({
+      onUpdate: ({ current, duration }) => {
+        const percent = Math.min(100, (current / duration) * 100);
+        const fill = document.getElementById("playback-progress-fill");
+        const bar = document.getElementById("playback-progress");
+        const head = document.querySelector("#playback-progress .head");
+        const elapsed = document.getElementById("now-elapsed");
+        const remain = document.getElementById("now-remain");
+
+        if (fill) fill.style.width = `${percent}%`;
+        if (bar) bar.setAttribute("aria-valuenow", String(Math.round(percent)));
+        if (head) head.style.left = `${percent}%`;
+        if (elapsed) elapsed.textContent = formatClock(current);
+        if (remain) remain.textContent = `-${formatClock(duration - current)}`;
+      },
+    });
   }
 
-  if (amDj) {
+  let djControlsBound = false;
+  function enableDjControls() {
+    if (djControlsBound) return;
+    djControlsBound = true;
     document.getElementById("play-button").addEventListener("click", async () => {
       const state = await fetchPlaybackState();
       if (state.is_playing) {
-        await djPause(state.position_at_start);
+        // state.position_at_start 는 "마지막으로 재생을 시작한 시점"의 위치일 뿐,
+        // 지금 실제로 어디까지 재생됐는지가 아니다. 그대로 넘기면 일시정지할 때마다
+        // 경과 시간이 사라지고, 다음 재생이 그 시작 지점부터 다시 튄다.
+        const currentPosition = computeExpectedPosition({
+          isPlaying: state.is_playing,
+          positionAtStart: state.position_at_start,
+          serverStartedAt: state.server_started_at,
+          nowMs: nowMs(),
+        });
+        await djPause(currentPosition);
         updatePlaybackToggle(false);
       } else if (!state.current_track_id && currentTracks[0]) {
         await djSetTrack(currentTracks[0].id);
@@ -317,6 +660,34 @@ async function bootstrap() {
       } else {
         await djPlay(state.position_at_start);
         updatePlaybackToggle(true);
+      }
+    });
+    document.getElementById("prev-button")?.addEventListener("click", async () => {
+      const state = await fetchPlaybackState();
+      const currentPosition = computeExpectedPosition({
+        isPlaying: state.is_playing,
+        positionAtStart: state.position_at_start,
+        serverStartedAt: state.server_started_at,
+        nowMs: nowMs(),
+      });
+      const decision = computePrevTrackAction({
+        tracks: currentTracks,
+        currentTrackId: state.current_track_id,
+        currentPosition,
+        isPlaying: state.is_playing,
+      });
+
+      if (decision.action === "prev_track") {
+        await djSetTrack(decision.trackId);
+        updatePlaybackToggle(true);
+      } else if (decision.action === "restart") {
+        if (decision.isPlaying) {
+          await djPlay(0);
+          updatePlaybackToggle(true);
+        } else {
+          await djPause(0);
+          updatePlaybackToggle(false);
+        }
       }
     });
     document.getElementById("next-button").addEventListener("click", async () => {
@@ -327,6 +698,10 @@ async function bootstrap() {
         await djSetTrack(next.id);
       }
     });
+  }
+
+  if (amDj) {
+    enableDjControls();
   }
 }
 

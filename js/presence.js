@@ -1,6 +1,6 @@
 import { supabase } from "./supabaseClient.js";
 
-export function initPresence({ uid, nickname, onSync }) {
+export function initPresence({ uid, nickname, getVolume, onSync }) {
   const channel = supabase.channel("room-presence", {
     config: { presence: { key: uid } },
   });
@@ -13,7 +13,8 @@ export function initPresence({ uid, nickname, onSync }) {
 
   channel.subscribe(async (status) => {
     if (status === "SUBSCRIBED") {
-      await channel.track({ uid, nickname });
+      const vol = getVolume ? getVolume() : { value: 100, muted: false };
+      await channel.track({ uid, nickname, volume: vol.value, muted: vol.muted });
     }
   });
 

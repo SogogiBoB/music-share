@@ -45,6 +45,25 @@ export async function addTrack({ url, uid }) {
   if (error) throw error;
 }
 
+export async function deleteTrack(trackId) {
+  const { error } = await supabase.from("tracks").delete().eq("id", trackId);
+  if (error) throw error;
+}
+
+export async function addTrackFromLibrary({ youtubeId, title, uid }) {
+  const existing = await fetchTracks();
+  if (existing.some((t) => t.youtube_id === youtubeId)) {
+    throw new Error("이미 대기열에 있는 곡이에요.");
+  }
+  const { error } = await supabase.from("tracks").insert({
+    youtube_id: youtubeId,
+    title,
+    added_by: uid,
+    position: existing.length,
+  });
+  if (error) throw error;
+}
+
 export function subscribeTracks(onChange) {
   const channel = supabase
     .channel("tracks-changes")

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시안 3 · SUGAR FM — Sugar DJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --sky:#e9e7ff;
+  --sky-2:#dcd9ff;
+  --card:#ffffff;
+  --plum:#2e2350;
+  --plum-soft:#6b5f92;
+  --butter:#ffc94d;
+  --mint:#6fd9be;
+  --berry:#ff6fa5;
+  --edge:#2e2350;
+  --font-d:"Bricolage Grotesque",system-ui,sans-serif;
+  --font-m:"DM Mono",ui-monospace,monospace;
+  --font-b:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;color:var(--plum);font-family:var(--font-b);line-height:1.55;
+  background:
+    radial-gradient(46rem 30rem at 88% -6%,rgba(255,201,77,.4),transparent 62%),
+    radial-gradient(40rem 30rem at 4% 104%,rgba(111,217,190,.4),transparent 60%),
+    var(--sky);
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none}button:not(:disabled){cursor:pointer}
+:focus-visible{outline:3px solid var(--berry);outline-offset:3px}
+ul{margin:0;padding:0;list-style:none}
+h1,h2,h3{margin:0;font-family:var(--font-d);letter-spacing:-.02em}
+.wrap{max-width:980px;margin:0 auto;padding:0 18px 64px}
+.mono{font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--plum-soft)}
+
+/* 미리보기 크롬 */
+.mock-bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:9px 18px;background:var(--plum);color:#e9e7ff;font-family:var(--font-m);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.mock-bar b{color:var(--butter)}
+.mock-bar .sp{flex:1}
+.mock-bar button{padding:5px 11px;border:1px solid rgba(233,231,255,.3);font-family:var(--font-m);font-size:11px}
+.mock-bar button[aria-pressed="true"]{background:var(--butter);border-color:var(--butter);color:var(--plum)}
+
+/* 블록 공통 — 굵은 테두리 + 단색 오프셋 그림자 */
+.block{background:var(--card);border:3px solid var(--edge);border-radius:22px;box-shadow:6px 6px 0 var(--edge)}
+.block + .block{margin-top:20px}
+.pad{padding:22px 24px 24px}
+
+/* 상단 */
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:22px 4px 16px}
+.logo{display:flex;align-items:center;gap:11px}
+.logo .knobmark{width:38px;height:38px;border-radius:50%;border:3px solid var(--edge);background:var(--butter);position:relative}
+.logo .knobmark::after{content:"";position:absolute;left:50%;top:5px;width:3px;height:11px;background:var(--edge);transform:translateX(-50%)}
+.logo h1{font-size:22px;font-weight:800}
+.logo .mono{display:block;margin-top:-2px}
+.top .sp{flex:1}
+.pill{padding:9px 17px;border:3px solid var(--edge);border-radius:999px;background:var(--card);
+  font-size:13.5px;font-weight:700;box-shadow:3px 3px 0 var(--edge)}
+.pill:active{transform:translate(3px,3px);box-shadow:none}
+.pill-berry{background:var(--berry);color:#fff}
+.pill-mint{background:var(--mint)}
+.pill-plain{box-shadow:none;border-width:2px;font-weight:600;color:var(--plum-soft)}
+.pill-plain:active{transform:none}
+.livedot{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.livedot i{width:11px;height:11px;border-radius:50%;background:var(--berry);border:2px solid var(--edge);animation:blink 2s ease-in-out infinite}
+@keyframes blink{50%{background:#ffd0e2}}
+
+/* 탭 */
+.tabs{display:flex;gap:10px;padding:0 4px 18px}
+.tabs button{padding:10px 20px;border:3px solid var(--edge);border-radius:999px;background:var(--card);font-size:14px;font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--plum);color:var(--sky);box-shadow:3px 3px 0 var(--edge)}
+
+/* ── 시그니처: 튜너 다이얼 ─────────────────────────────── */
+.tuner{padding:24px 24px 20px;background:linear-gradient(180deg,#fff,#f6f4ff);border-radius:19px 19px 0 0}
+.tuner .np{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.tuner h2{font-size:clamp(24px,4.6vw,38px);font-weight:800;line-height:1.1}
+.tuner .sub{margin:2px 0 20px;color:var(--plum-soft);font-size:14px}
+.dial{position:relative;height:74px;border:3px solid var(--edge);border-radius:14px;background:
+  linear-gradient(180deg,var(--butter),#ffdb85);overflow:hidden}
+.dial .ticks{position:absolute;inset:0;background:
+  repeating-linear-gradient(90deg,var(--edge) 0 2px,transparent 2px 26px),
+  repeating-linear-gradient(90deg,rgba(46,35,80,.45) 0 1px,transparent 1px 6.5px);
+  background-size:100% 20px,100% 11px;background-position:0 0,0 0;background-repeat:repeat-x;opacity:.85}
+.dial .played{position:absolute;inset:0 auto 0 0;width:68%;background:rgba(111,217,190,.55);border-right:3px solid var(--edge)}
+.dial .needle{position:absolute;top:-3px;bottom:-3px;left:68%;width:7px;background:var(--berry);border:3px solid var(--edge);border-radius:4px}
+.dial .marks{position:absolute;left:0;right:0;bottom:5px;display:flex;justify-content:space-between;padding:0 9px;
+  font-family:var(--font-m);font-size:10px;letter-spacing:.1em;color:var(--edge)}
+.deckrow{display:flex;align-items:center;gap:14px;padding:18px 24px 22px;flex-wrap:wrap;border-top:3px solid var(--edge)}
+.knob{width:62px;height:62px;border-radius:50%;border:3px solid var(--edge);background:var(--card);
+  display:grid;place-items:center;font-size:20px;box-shadow:4px 4px 0 var(--edge)}
+.knob:active{transform:translate(4px,4px);box-shadow:none}
+.knob-main{background:var(--berry);color:#fff}
+.deckrow .times{margin-left:auto;font-family:var(--font-m);font-size:14px;letter-spacing:.06em}
+
+/* 청취자 */
+.people{display:flex;flex-wrap:wrap;gap:10px}
+.person{display:flex;align-items:center;gap:9px;padding:6px 14px 6px 6px;border:3px solid var(--edge);border-radius:999px;background:var(--card)}
+.person .av{width:32px;height:32px;border-radius:50%;border:3px solid var(--edge);background:var(--mint);
+  display:grid;place-items:center;font-family:var(--font-d);font-weight:700;font-size:14px}
+.person .nm{font-size:14px;font-weight:700}
+.person .rl{font-family:var(--font-m);font-size:10px;letter-spacing:.1em;color:var(--plum-soft);text-transform:uppercase}
+.person.is-dj{background:var(--butter)}
+.person.is-dj .av{background:var(--berry);color:#fff}
+.person .give{margin-left:4px;padding:4px 10px;border:2px solid var(--edge);border-radius:999px;font-size:11.5px;font-weight:700}
+.person .give:hover{background:var(--sky-2)}
+
+/* 섹션 헤드 */
+.head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.head h2{font-size:20px;font-weight:800}
+.head .mono{margin-left:auto}
+
+/* 입력 */
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.inp{flex:1;min-width:190px;min-height:48px;padding:0 16px;border:3px solid var(--edge);border-radius:14px;
+  background:var(--card);font-size:14.5px}
+.inp::placeholder{color:#a49dc0}
+.inp:focus{outline:none;box-shadow:3px 3px 0 var(--edge)}
+.msg{margin:10px 0 0;font-size:13px;color:var(--plum-soft)}
+.msg.ok{color:#1c8a63;font-weight:600}
+.msg.err{color:#d63b6e;font-weight:600}
+.lab{display:block;margin:18px 0 8px;font-family:var(--font-m);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--plum-soft)}
+
+/* 트랙 */
+.tracks li{display:flex;align-items:center;gap:14px;padding:11px 12px;border:3px solid transparent;border-radius:16px}
+.tracks li + li{margin-top:6px}
+.tracks li:hover{border-color:var(--edge);background:#fbfaff}
+.tracks .n{font-family:var(--font-m);font-size:13px;color:var(--plum-soft);width:24px;flex:none}
+.tracks .t{flex:1;min-width:0;text-align:left;font-size:15.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tracks .go{width:38px;height:38px;flex:none;border:3px solid var(--edge);border-radius:50%;background:var(--card);display:grid;place-items:center;font-size:13px}
+.tracks .go:active{transform:translateY(2px)}
+.tracks .x{width:32px;height:32px;flex:none;border-radius:50%;color:var(--plum-soft);font-size:18px}
+.tracks .x:hover{background:#ffe3ee;color:#d63b6e}
+.tracks li.playing{border-color:var(--edge);background:var(--mint);box-shadow:4px 4px 0 var(--edge)}
+.tracks li.playing .n{color:var(--plum)}
+.tracks li.playing .t{font-weight:800}
+.eq{display:flex;align-items:flex-end;gap:3px;height:20px;flex:none}
+.eq i{width:4px;background:var(--plum);border-radius:2px;animation:bounce 1.05s ease-in-out infinite}
+.eq i:nth-child(2){animation-delay:.18s}.eq i:nth-child(3){animation-delay:.36s}.eq i:nth-child(4){animation-delay:.09s}
+@keyframes bounce{0%,100%{height:6px}50%{height:19px}}
+
+/* 라이브러리 */
+.lib .inp{min-width:120px}
+.lib .pill{white-space:nowrap}
+.lib{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:20px;align-items:start}
+.crate{display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;border:3px solid transparent;border-radius:16px;text-align:left}
+.crate:hover{border-color:var(--edge)}
+.crate.on{border-color:var(--edge);background:var(--butter);box-shadow:4px 4px 0 var(--edge)}
+.crate .cn{flex:1;min-width:0;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crate .cc{font-family:var(--font-m);font-size:12px;color:var(--plum-soft)}
+.crate-acts{display:flex;gap:8px;padding:8px 14px 4px}
+.crate-acts button{padding:4px 11px;border:2px solid var(--edge);border-radius:999px;font-size:11.5px;font-weight:600}
+.crate-acts button:hover{background:var(--sky-2)}
+.res li{margin-top:8px}
+.res button{display:block;width:100%;text-align:left;padding:12px 15px;border:3px solid var(--edge);border-radius:14px;font-size:14px;font-weight:600}
+.res button:hover{background:var(--sky-2);box-shadow:3px 3px 0 var(--edge)}
+.sel{margin-top:16px;min-height:46px;padding:0 14px;border:3px solid var(--edge);border-radius:14px;background:var(--card);font-size:14px;font-weight:600}
+
+/* 게이트 */
+.gate{max-width:470px;margin:48px auto 0}
+.gate h2{font-size:26px;font-weight:800;line-height:1.2}
+.gate .sub{margin:8px 0 0;color:var(--plum-soft);font-size:14px}
+.gtabs{display:flex;gap:8px;margin-bottom:18px}
+.gtabs button{flex:1;padding:11px;border:3px solid var(--edge);border-radius:999px;font-size:14px;font-weight:700}
+.gtabs button[aria-selected="true"]{background:var(--plum);color:var(--sky)}
+.gate .inp{width:100%;flex:none}
+.gate .pill{width:100%;margin-top:22px;padding:15px;text-align:center;font-size:15px}
+
+footer{padding:32px 4px 0;font-size:13px;color:var(--plum-soft)}
+.screen{display:none}.screen.is-on{display:block}
+@media (max-width:560px){
+  .dial .marks span:nth-child(2),.dial .marks span:nth-child(4){display:none}
+}
+@media (max-width:820px){
+  .lib{grid-template-columns:1fr}
+  .block{box-shadow:4px 4px 0 var(--edge)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="mock-bar">
+  <b>시안 3</b><span>sugar fm · 토이 라디오</span><span class="sp"></span>
+  <button type="button" data-go="room" aria-pressed="true">함께 듣기</button>
+  <button type="button" data-go="lib" aria-pressed="false">내 재생목록</button>
+  <button type="button" data-go="gate" aria-pressed="false">로그인</button>
+</div>
+
+<!-- ======== 함께 듣기 ======== -->
+<div class="screen is-on" id="s-room">
+<div class="wrap">
+  <div class="top">
+    <span class="logo"><span class="knobmark" aria-hidden="true"></span>
+      <span><h1>Sugar FM</h1><span class="mono">모두의 재생목록</span></span></span>
+    <span class="sp"></span>
+    <span class="livedot"><i></i> on air</span>
+    <button class="pill pill-berry" type="button">DJ 되기</button>
+    <button class="pill pill-plain" type="button">로그아웃</button>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" type="button">함께 듣기</button>
+    <button role="tab" aria-selected="false" type="button" data-go="lib">내 재생목록</button>
+  </nav>
+
+  <section class="block">
+    <div class="tuner">
+      <div class="np"><span class="mono">지금 나오는 곡</span><span class="mono">DJ 준현 · 싱크 0.2초</span></div>
+      <h2>새소년 — 난춤</h2>
+      <p class="sub">이 방에 있는 5명 모두 같은 지점을 듣고 있어요.</p>
+      <div class="dial" role="progressbar" aria-label="재생 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="68">
+        <div class="ticks" aria-hidden="true"></div>
+        <div class="played"></div>
+        <div class="needle"></div>
+        <div class="marks" aria-hidden="true"><span>00:00</span><span>01:10</span><span>02:20</span><span>03:30</span><span>04:41</span></div>
+      </div>
+    </div>
+    <div class="deckrow">
+      <button class="knob knob-main" type="button" aria-label="일시정지">❙❙</button>
+      <button class="knob" type="button" aria-label="다음 곡">▶❙</button>
+      <span class="times">03:12 <span style="color:var(--plum-soft)">/ 04:41</span></span>
+    </div>
+  </section>
+
+  <section class="block pad">
+    <div class="head"><h2>같이 듣는 중</h2><span class="mono">5명</span></div>
+    <ul class="people">
+      <li class="person"><span class="av">준</span><span><span class="nm">준현</span> <span class="rl">나 · dj</span></span></li>
+      <li class="person"><span class="av">민</span><span><span class="nm">민지</span> <span class="rl">리스너</span></span><button class="give" type="button">DJ 위임</button></li>
+      <li class="person"><span class="av">태</span><span><span class="nm">태오</span> <span class="rl">리스너</span></span><button class="give" type="button">DJ 위임</button></li>
+      <li class="person"><span class="av">서</span><span><span class="nm">서윤</span> <span class="rl">리스너</span></span><button class="give" type="button">DJ 위임</button></li>
+      <li class="person"><span class="av">하</span><span><span class="nm">하람</span> <span class="rl">리스너</span></span><button class="give" type="button">DJ 위임</button></li>
+    </ul>
+  </section>
+
+  <section class="block pad">
+    <div class="head"><h2>재생목록</h2><span class="mono">7곡</span></div>
+    <div class="row">
+      <input class="inp" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="추가할 유튜브 링크">
+      <button class="pill pill-mint" type="button">추가</button>
+    </div>
+    <p class="msg ok">재생목록에 추가했어요.</p>
+
+    <ul class="tracks" style="margin-top:16px">
+      <li class="playing"><span class="n">03</span><span class="t">새소년 — 난춤 (Live)</span>
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <button class="x" type="button" aria-label="삭제">×</button></li>
+      <li><span class="n">04</span><button class="t" type="button">검정치마 — Everything</button><button class="go" type="button" aria-label="바로 재생">▶</button><button class="x" type="button" aria-label="삭제">×</button></li>
+      <li><span class="n">05</span><button class="t" type="button">실리카겔 — NO PAIN</button><button class="go" type="button" aria-label="바로 재생">▶</button><button class="x" type="button" aria-label="삭제">×</button></li>
+      <li><span class="n">06</span><button class="t" type="button">Tom Misch — Movie</button><button class="go" type="button" aria-label="바로 재생">▶</button><button class="x" type="button" aria-label="삭제">×</button></li>
+      <li><span class="n">07</span><button class="t" type="button">혁오 — TOMBOY</button><button class="go" type="button" aria-label="바로 재생">▶</button><button class="x" type="button" aria-label="삭제">×</button></li>
+    </ul>
+  </section>
+
+  <footer>DJ가 곡을 고르고 재생 위치를 맞춰요. 나머지는 그냥 듣기만 하면 됩니다.</footer>
+</div>
+</div>
+
+<!-- ======== 내 재생목록 ======== -->
+<div class="screen" id="s-lib">
+<div class="wrap">
+  <div class="top">
+    <span class="logo"><span class="knobmark" aria-hidden="true"></span>
+      <span><h1>Sugar FM</h1><span class="mono">내 재생목록</span></span></span>
+    <span class="sp"></span>
+    <button class="pill pill-plain" type="button">로그아웃</button>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" aria-selected="false" type="button" data-go="room">함께 듣기</button>
+    <button role="tab" aria-selected="true" type="button">내 재생목록</button>
+  </nav>
+
+  <section class="block pad">
+    <div class="row">
+      <input class="inp" type="text" placeholder="곡 제목으로 재생목록 검색" aria-label="곡 제목으로 재생목록 검색">
+      <button class="pill" type="button">검색</button>
+    </div>
+  </section>
+
+  <div class="lib" style="margin-top:20px">
+    <section class="block pad">
+      <div class="head"><h2>내 재생목록</h2><span class="mono">4개</span></div>
+      <div class="row" style="margin-bottom:14px">
+        <input class="inp" type="text" placeholder="새 재생목록 이름" maxlength="40" aria-label="새 재생목록 이름">
+        <button class="pill pill-mint" type="button">＋</button>
+      </div>
+      <ul>
+        <li>
+          <button class="crate on" type="button"><span class="cn">새벽 드라이브</span><span class="cc">12</span></button>
+          <div class="crate-acts"><button type="button">이름변경</button><button type="button">삭제</button></div>
+        </li>
+        <li><button class="crate" type="button"><span class="cn">집중용 로파이</span><span class="cc">31</span></button></li>
+        <li><button class="crate" type="button"><span class="cn">주말 파티</span><span class="cc">08</span></button></li>
+        <li><button class="crate" type="button"><span class="cn">혼자 듣는 밤</span><span class="cc">19</span></button></li>
+      </ul>
+    </section>
+
+    <section class="block pad">
+      <div class="head"><h2>새벽 드라이브</h2><span class="mono">12곡</span></div>
+
+      <span class="lab">유튜브 링크로 추가</span>
+      <div class="row"><input class="inp" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="유튜브 링크로 추가"><button class="pill" type="button">추가</button></div>
+
+      <span class="lab">유튜브 검색으로 추가</span>
+      <div class="row"><input class="inp" type="text" placeholder="검색할 곡 제목" aria-label="유튜브 검색"><button class="pill" type="button">검색</button></div>
+      <ul class="res">
+        <li><button type="button">아이유 — 밤편지</button></li>
+        <li><button type="button">잔나비 — 주저하는 연인들을 위해</button></li>
+      </ul>
+
+      <ul class="tracks" style="margin-top:20px">
+        <li><span class="n">01</span><span class="t">검정치마 — Everything</span><button class="x" type="button" aria-label="삭제">×</button></li>
+        <li><span class="n">02</span><span class="t">새소년 — 난춤 (Live)</span><button class="x" type="button" aria-label="삭제">×</button></li>
+        <li><span class="n">03</span><span class="t">Men I Trust — Show Me How</span><button class="x" type="button" aria-label="삭제">×</button></li>
+      </ul>
+
+      <select class="sel" aria-label="다른 재생목록으로 이동">
+        <option>다른 재생목록으로 이동</option>
+        <option>집중용 로파이</option>
+        <option>주말 파티</option>
+      </select>
+    </section>
+  </div>
+  <footer>재생목록은 나만 볼 수 있어요. 방에 넣으면 그때 공개됩니다.</footer>
+</div>
+</div>
+
+<!-- ======== 로그인 ======== -->
+<div class="screen" id="s-gate">
+<div class="wrap">
+  <div class="gate">
+    <section class="block pad">
+      <div class="logo" style="margin-bottom:18px"><span class="knobmark" aria-hidden="true"></span>
+        <span><h1 style="font-size:20px">Sugar FM</h1><span class="mono">주파수 맞추는 중</span></span></div>
+      <div class="gtabs" role="tablist">
+        <button role="tab" aria-selected="true" type="button">로그인</button>
+        <button role="tab" aria-selected="false" type="button">회원가입</button>
+      </div>
+      <h2>같이 들으려면<br>먼저 들어와야 해요</h2>
+      <p class="sub">한 방에 모이면 같은 곡이 같은 지점부터 재생됩니다.</p>
+      <span class="lab">email</span>
+      <input class="inp" type="email" placeholder="이메일">
+      <span class="lab">password</span>
+      <input class="inp" type="password" placeholder="비밀번호">
+      <p class="msg err">이메일 또는 비밀번호를 확인해 주세요.</p>
+      <button class="pill pill-berry" type="button">로그인</button>
+    </section>
+
+    <section class="block pad">
+      <span class="mono">소리 확인</span>
+      <h2 style="font-size:20px;margin-top:6px">스피커 준비됐나요?</h2>
+      <p class="sub">브라우저가 자동 재생을 막아서, 처음 한 번만 눌러 주세요.</p>
+      <button class="pill pill-mint" type="button" style="width:100%;margin-top:18px;padding:15px;text-align:center">듣기 시작</button>
+    </section>
+  </div>
+</div>
+</div>
+
+<script>
+const screens={room:document.getElementById("s-room"),lib:document.getElementById("s-lib"),gate:document.getElementById("s-gate")};
+function go(n){Object.entries(screens).forEach(([k,el])=>el.classList.toggle("is-on",k===n));
+document.querySelectorAll(".mock-bar [data-go]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.go===n)));window.scrollTo(0,0);}
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{location.hash=b.dataset.go;go(b.dataset.go)}));
+function fromHash(){const h=location.hash.slice(1);if(screens[h])go(h);}
+addEventListener("hashchange",fromHash);fromHash();
+</script>
+</body>
+</html>

@@ -3,127 +3,290 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#fff8fa">
+  <meta name="theme-color" content="#4b301c">
   <meta name="description" content="친구들과 같은 음악을 같은 순간에 듣는 실시간 음악 공유 공간">
   <title>Sugar DJ · Music Share</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="ambient ambient-one" aria-hidden="true"></div>
-  <div class="ambient ambient-two" aria-hidden="true"></div>
 
   <div id="nickname-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title">
-    <div class="modal-content">
-      <div class="brand-mark brand-mark-large" aria-hidden="true">♪</div>
-      <p class="eyebrow">WELCOME TO SUGAR DJ</p>
-      <h2 id="nickname-title">어떤 이름으로<br>함께 들을까요?</h2>
-      <p class="modal-description">친구들이 알아볼 수 있는 닉네임을 입력해 주세요.</p>
-      <label class="sr-only" for="nickname-input">닉네임</label>
-      <input id="nickname-input" type="text" maxlength="20" placeholder="닉네임을 입력하세요" autocomplete="nickname" aria-describedby="nickname-error" aria-invalid="false">
-      <p id="nickname-error" class="field-message error-message" role="alert"></p>
-      <button id="nickname-submit" class="button button-primary button-full" type="button">
-        음악방 입장하기 <span aria-hidden="true">→</span>
-      </button>
+    <div class="cabinet gate">
+      <section class="face">
+        <div class="plate">access<span class="code">sugar dj — set 61</span></div>
+        <div class="body">
+          <div class="gate-tabs" role="tablist">
+            <button id="auth-tab-login" class="auth-tab" type="button" role="tab" aria-selected="true">로그인</button>
+            <button id="auth-tab-signup" class="auth-tab" type="button" role="tab" aria-selected="false">회원가입</button>
+            <button id="auth-tab-guest" class="auth-tab" type="button" role="tab" aria-selected="false">게스트</button>
+          </div>
+
+          <div id="auth-panel-login" role="tabpanel">
+            <h2 id="nickname-title" style="margin-top:20px">전원을 켜고 들어오세요</h2>
+            <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
+            <label class="lab" for="login-email-input">EMAIL</label>
+            <input id="login-email-input" class="field" type="email" placeholder="이메일" autocomplete="email">
+            <label class="lab" for="login-password-input">PASSWORD</label>
+            <input id="login-password-input" class="field" type="password" placeholder="비밀번호" autocomplete="current-password">
+            <p id="login-error" class="note err" role="alert"></p>
+            <button id="login-submit" class="key key-on" type="button">로그인</button>
+          </div>
+
+          <div id="auth-panel-signup" class="hidden" role="tabpanel">
+            <h2 style="margin-top:20px">계정을 만들면<br>DJ가 될 수 있어요</h2>
+            <p class="sub">회원만 DJ 되기와 내 재생목록을 쓸 수 있습니다.</p>
+            <label class="lab" for="signup-email-input">EMAIL</label>
+            <input id="signup-email-input" class="field" type="email" placeholder="이메일" autocomplete="email">
+            <label class="lab" for="signup-nickname-input">NICKNAME</label>
+            <input id="signup-nickname-input" class="field" type="text" maxlength="20" placeholder="닉네임" autocomplete="nickname">
+            <label class="lab" for="signup-password-input">PASSWORD</label>
+            <input id="signup-password-input" class="field" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
+            <p id="signup-error" class="note err" role="alert"></p>
+            <button id="signup-submit" class="key key-on" type="button">가입하고 입장하기</button>
+          </div>
+
+          <div id="auth-panel-guest" class="hidden" role="tabpanel">
+            <h2 style="margin-top:20px">가입 없이<br>듣기만 할래요</h2>
+            <p class="sub">닉네임만 정하면 바로 들어옵니다.</p>
+            <label class="lab" for="guest-nickname-input">NICKNAME</label>
+            <input id="guest-nickname-input" class="field" type="text" maxlength="20" placeholder="닉네임" autocomplete="nickname">
+            <ul class="gate-limits">
+              <li>DJ가 될 수 없고, DJ 위임도 받지 않습니다</li>
+              <li>내 재생목록을 만들거나 볼 수 없습니다</li>
+              <li>듣기와 내 소리 크기 조절은 그대로 됩니다</li>
+            </ul>
+            <p id="guest-error" class="note err" role="alert"></p>
+            <button id="guest-submit" class="key key-on" type="button">게스트로 입장</button>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 
   <div id="listen-gate" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="listen-title">
-    <div class="modal-content modal-content-compact">
-      <div class="pulse-icon" aria-hidden="true"><span>♪</span></div>
-      <p class="eyebrow">READY TO LISTEN</p>
-      <h2 id="listen-title">같이 들을 준비가<br>됐나요?</h2>
-      <p class="modal-description">브라우저의 재생 정책에 따라 처음 한 번만 버튼을 눌러 주세요.</p>
-      <button id="listen-start" class="button button-primary button-full" type="button">
-        <span aria-hidden="true">▶</span> 듣기 시작
-      </button>
+    <div class="cabinet gate">
+      <section class="face">
+        <div class="plate">sound check<span class="code">브라우저 재생 정책</span></div>
+        <div class="body">
+          <h2 id="listen-title">같이 들을 준비가<br>됐나요?</h2>
+          <p class="sub">처음 한 번만 눌러 주세요. 브라우저가 자동 재생을 막기 때문에 시작 버튼이 필요합니다.</p>
+          <p class="warmup">&gt; WARMING UP TUBES...</p>
+          <button id="listen-start" class="key key-on" type="button">
+            듣기 시작
+          </button>
+        </div>
+      </section>
     </div>
   </div>
 
-  <main id="app" class="app-shell hidden">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-mark" aria-hidden="true">♪</div>
-        <div>
-          <p class="brand-name">Sugar DJ</p>
-          <p class="brand-caption">music together</p>
-        </div>
+  <main id="app" class="cabinet hidden">
+    <section class="face">
+      <div class="rail">
+        <span class="badge"><h1 class="mk">Sugar DJ</h1><span class="no">set 61</span></span>
+        <span class="pilot"><i></i> on air</span>
+        <span class="sp"></span>
+        <p id="dj-claim-status" class="pilot" role="status" aria-live="polite"></p>
+        <button id="dj-claim-button" class="key key-on hidden" type="button">DJ 되기</button>
+        <button id="logout-button" class="key" type="button">로그아웃</button>
       </div>
-      <div class="topbar-actions">
-        <p id="dj-claim-status" class="dj-claim-status" role="status" aria-live="polite"></p>
-        <button id="dj-claim-button" class="button button-dj-claim hidden" type="button">
-          <span aria-hidden="true">✦</span> DJ 되기
-        </button>
-        <div class="room-status" aria-label="음악방 연결됨">
-          <span class="status-dot" aria-hidden="true"></span>
-          LIVE ROOM
-        </div>
-      </div>
-    </header>
-<!-- 
-    <div class="hero-copy">
-      <p class="eyebrow">SHARED PLAYLIST</p>
-      <h1>같이 듣는 순간을<br><span>더 다정하게.</span></h1>
-      <p>유튜브 링크 하나로 모두가 같은 음악을 같은 순간에 들어요.</p>
-    </div> -->
+      <nav class="tabs" role="tablist">
+        <button id="main-tab-room" class="tab" type="button" role="tab" aria-selected="true">함께 듣기</button>
+        <button id="main-tab-playlists" class="tab" type="button" role="tab" aria-selected="false">내 재생목록</button>
+      </nav>
+    </section>
 
-    <div class="dashboard">
-      <section id="playlist-section" class="panel playlist-panel" aria-labelledby="playlist-title">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">NOW IN THE ROOM</p>
-            <h2 id="playlist-title">재생목록</h2>
+    <div id="room-view" role="tabpanel">
+      <section class="face">
+        <div class="plate">now playing<span class="code">sync ±0.2s</span></div>
+        <div class="deck">
+          <div class="tube-wrap">
+            <div class="tube">
+              <div class="status"><span class="on">&#9654; PLAY</span><span>SYNC LOCK</span></div>
+              <h2 id="now-title">—</h2>
+              <p class="sub" id="now-sub">DJ가 곡을 고르는 중이에요</p>
+              <div class="clock"><span id="now-elapsed">00:00</span><span id="now-remain">-00:00</span></div>
+              <div id="playback-progress" class="scale" role="progressbar" aria-label="재생 진행률"
+                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="ticks"></div>
+                <div id="playback-progress-fill" class="fill"></div>
+                <div class="head"></div>
+              </div>
+            </div>
           </div>
-          <span class="section-icon" aria-hidden="true">♫</span>
-        </div>
-
-        <div id="add-track-form" class="add-track hidden">
-          <label class="sr-only" for="youtube-url-input">추가할 유튜브 링크</label>
-          <div class="input-action">
-            <input id="youtube-url-input" type="url" inputmode="url" autocomplete="url" placeholder="유튜브 링크를 붙여넣으세요" aria-describedby="add-track-status">
-            <button id="add-track-button" class="button button-secondary" type="button">
-              <span aria-hidden="true">＋</span> 추가
-            </button>
+          <div class="controls">
+            <span class="hint">output level</span>
+            <div class="vu" aria-hidden="true">
+              <span class="lbl">VU</span><span class="red">+3</span>
+              <svg class="vu-face" viewBox="0 0 200 92" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path d="M53.2,36.0 A70,70 0 0 1 114.6,19.5" fill="none" stroke="#2b1d10" stroke-width="1.4" opacity=".6"/><path d="M114.6,19.5 A70,70 0 0 1 146.8,36.0" fill="none" stroke="#c0342a" stroke-width="1.8" opacity=".8"/><line x1="63.9" y1="47.9" x2="53.2" y2="36.0" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="66.7" y1="40.5" x2="59.8" y2="30.7" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="72.8" y1="36.8" x2="67.1" y2="26.2" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="80.6" y1="37.6" x2="74.9" y2="22.6" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="86.0" y1="31.7" x2="83.1" y2="20.1" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="92.9" y1="30.4" x2="91.5" y2="18.5" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="100.0" y1="34.0" x2="100.0" y2="18.0" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="107.1" y1="30.4" x2="108.5" y2="18.5" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="114.0" y1="31.7" x2="116.9" y2="20.1" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="119.4" y1="37.6" x2="125.1" y2="22.6" stroke="#c0342a" stroke-width="2" opacity="0.85"/><line x1="127.2" y1="36.8" x2="132.9" y2="26.2" stroke="#c0342a" stroke-width="1.1" opacity="0.55"/><line x1="133.3" y1="40.5" x2="140.2" y2="30.7" stroke="#c0342a" stroke-width="1.1" opacity="0.55"/><line x1="136.1" y1="47.9" x2="146.8" y2="36.0" stroke="#c0342a" stroke-width="2" opacity="0.85"/></svg>
+              <div class="needle"></div>
+            </div>
+            <section id="controls-section" class="hidden" aria-label="재생 컨트롤">
+              <span class="hint">transport — DJ 전용</span>
+              <div class="knobs">
+                <button id="prev-button" class="knob" type="button" aria-label="이전 곡">
+                  <span aria-hidden="true">❙◀</span>
+                </button>
+                <button id="play-button" class="knob knob-main" type="button" aria-label="재생">
+                  <span aria-hidden="true">▶</span>
+                </button>
+                <button id="next-button" class="knob" type="button" aria-label="다음 곡">
+                  <span aria-hidden="true">▶❙</span>
+                </button>
+              </div>
+            </section>
+            <div class="grille" aria-hidden="true"></div>
           </div>
-          <p id="add-track-status" class="field-message" role="status" aria-live="polite"></p>
         </div>
-
-        <ul id="track-list" class="track-list" aria-live="polite"></ul>
-
-        <section id="controls-section" class="player-controls hidden" aria-label="재생 컨트롤">
-          <button id="play-button" class="control-button control-button-main" type="button" aria-label="재생">
-            <span aria-hidden="true">▶</span>
-          </button>
-          <button id="next-button" class="control-button" type="button" aria-label="다음 곡">
-            <span aria-hidden="true">▶ı</span>
-          </button>
-        </section>
       </section>
 
-      <section id="presence-section" class="panel presence-panel" aria-labelledby="presence-title">
-        <div class="section-heading">
-          <div>
-            <p class="section-kicker">LISTENING TOGETHER</p>
-            <h2 id="presence-title">함께 듣는 사람</h2>
+      <section id="volume-section" class="face" aria-label="볼륨">
+        <div class="plate">volume<span class="code">master × my set</span></div>
+        <div class="body">
+          <div class="mixer">
+            <div class="vk" id="master-volume">
+              <span class="vk-name">MASTER</span>
+              <div class="vk-dial">
+                <svg class="vk-arc" viewBox="0 0 120 120" aria-hidden="true"><path class="vk-arc-bg" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4"/><path class="vk-arc-fill" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4" stroke-dasharray="235.6" stroke-dashoffset="235.6"/><g class="vk-ticks"><line x1="34.5" y1="85.5" x2="28.2" y2="91.8" stroke-width="2.2" opacity="0.85"/><line x1="22.9" y1="72.1" x2="17.2" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="21.5" y1="53.9" x2="15.6" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="28.4" y1="37.1" x2="23.6" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="42.3" y1="25.3" x2="39.6" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="60.0" y1="24.0" x2="60.0" y2="15.0" stroke-width="2.2" opacity="0.85"/><line x1="77.7" y1="25.3" x2="80.4" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="91.6" y1="37.1" x2="96.4" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="98.5" y1="53.9" x2="104.4" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="97.1" y1="72.1" x2="102.8" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="85.5" y1="85.5" x2="91.8" y2="91.8" stroke-width="2.2" opacity="0.85"/></g></svg>
+                <div class="vk-cap"><i></i></div>
+                <input id="master-volume-input" class="vk-input" type="range" min="0" max="100" value="100" aria-label="마스터 볼륨">
+              </div>
+              <span class="vk-read"><span id="master-volume-num" class="vk-num">100</span><small>/100</small></span>
+              <span id="master-volume-tag" class="vk-tag">DJ 전용 · 방 전체 기준</span>
+              <button id="master-volume-mute" class="key vk-mute" type="button">음소거</button>
+            </div>
+            <div class="vk" id="my-volume">
+              <span class="vk-name">MY SET</span>
+              <div class="vk-dial">
+                <svg class="vk-arc" viewBox="0 0 120 120" aria-hidden="true"><path class="vk-arc-bg" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4"/><path class="vk-arc-fill" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4" stroke-dasharray="235.6" stroke-dashoffset="235.6"/><g class="vk-ticks"><line x1="34.5" y1="85.5" x2="28.2" y2="91.8" stroke-width="2.2" opacity="0.85"/><line x1="22.9" y1="72.1" x2="17.2" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="21.5" y1="53.9" x2="15.6" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="28.4" y1="37.1" x2="23.6" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="42.3" y1="25.3" x2="39.6" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="60.0" y1="24.0" x2="60.0" y2="15.0" stroke-width="2.2" opacity="0.85"/><line x1="77.7" y1="25.3" x2="80.4" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="91.6" y1="37.1" x2="96.4" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="98.5" y1="53.9" x2="104.4" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="97.1" y1="72.1" x2="102.8" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="85.5" y1="85.5" x2="91.8" y2="91.8" stroke-width="2.2" opacity="0.85"/></g></svg>
+                <div class="vk-cap"><i></i></div>
+                <input id="my-volume-input" class="vk-input" type="range" min="0" max="100" value="100" aria-label="내 볼륨">
+              </div>
+              <span class="vk-read"><span id="my-volume-num" class="vk-num">100</span><small>/100</small></span>
+              <span class="vk-tag">내 기기에서만 적용</span>
+              <button id="my-volume-mute" class="key vk-mute" type="button">음소거</button>
+            </div>
+            <div class="out">
+              <span class="out-name">실제 출력</span>
+              <span class="out-num" id="output-volume-num">100</span>
+              <div class="out-bar"><i id="output-volume-bar"></i></div>
+              <span class="out-calc" id="output-volume-calc"></span>
+            </div>
           </div>
-          <span id="presence-count" class="member-count">0명</span>
+          <p id="volume-status" class="note" role="status" aria-live="polite"></p>
         </div>
-        <ul id="presence-list" class="presence-list" aria-live="polite"></ul>
-        <div class="room-note">
-          <span aria-hidden="true">♡</span>
-          이 방의 DJ가 음악을 고르고 재생을 함께 맞춰요.
+      </section>
+
+      <section id="presence-section" class="face" aria-labelledby="presence-title">
+        <div class="plate">presets — 함께 듣는 중<span class="code"><span id="presence-count">0</span>명</span></div>
+        <div class="body">
+          <h2 id="presence-title" class="sr-only">함께 듣는 사람</h2>
+          <ul id="presence-list" class="presets" aria-live="polite"></ul>
+        </div>
+      </section>
+
+      <p id="listener-note" class="listener-note hidden">
+        재생은 <b>DJ가 맞춥니다</b>. 지금 나오는 곡만 화면에 보여요.<br>
+        내 소리 크기는 아래 <b>내 볼륨</b>에서 조절하세요.
+      </p>
+
+      <section id="playlist-section" class="face" aria-labelledby="playlist-title">
+        <div class="plate">queue<span class="code"><span id="queue-count">0</span> tracks</span></div>
+        <div class="body">
+          <h2 id="playlist-title" class="sr-only">대기열</h2>
+
+          <div id="add-track-form" class="hidden">
+            <div class="addrow">
+              <input id="youtube-url-input" class="field" type="url" inputmode="url" autocomplete="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="추가할 유튜브 링크" aria-describedby="add-track-status">
+              <button id="add-track-button" class="key" type="button">추가</button>
+            </div>
+            <p id="add-track-status" class="note" role="status" aria-live="polite"></p>
+          </div>
+
+          <div id="library-picker" class="pick">
+            <div class="pick-head">
+              <span class="hint">내 재생목록에서 대기열로</span>
+              <select id="library-picker-select" class="field" aria-label="가져올 재생목록"></select>
+            </div>
+            <ul id="library-picker-list" class="pick-list" aria-live="polite"></ul>
+            <div class="pick-foot">
+              <p id="library-picker-note" class="note" role="status" aria-live="polite"></p>
+              <button id="library-picker-all" class="key" type="button">남은 곡 전부 대기열로</button>
+            </div>
+          </div>
+
+          <ul id="track-list" style="margin-top:14px" aria-live="polite"></ul>
         </div>
       </section>
     </div>
 
-    <footer>
-      <span aria-hidden="true">♪</span> 좋은 음악은 함께 들을 때 더 좋아요.
-    </footer>
+    <div id="playlists-view" class="hidden" role="tabpanel">
+      <section class="face">
+        <div class="plate">search<span class="code">곡 제목으로 전체 재생목록 검색</span></div>
+        <div class="body">
+          <div class="addrow">
+            <input id="playlist-search-input" class="field" type="text" placeholder="곡 제목으로 재생목록 검색" aria-label="곡 제목으로 재생목록 검색">
+            <button id="playlist-search-button" class="key" type="button">검색</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="face">
+        <div class="lib">
+          <div class="lib-side">
+            <div class="plate">banks<span class="code">playlists</span></div>
+            <div class="lib-side-body">
+              <div class="addrow">
+                <input id="new-playlist-name-input" class="field" type="text" placeholder="새 재생목록 이름" maxlength="40" aria-label="새 재생목록 이름">
+                <button id="new-playlist-button" class="key" type="button">＋</button>
+              </div>
+              <p id="playlist-manager-status" class="note" role="status" aria-live="polite"></p>
+              <ul id="playlist-list" aria-live="polite"></ul>
+            </div>
+          </div>
+
+          <div class="lib-main">
+            <div id="playlist-detail-empty" class="listener-note">
+              <strong>재생목록을 선택해 주세요</strong>
+            </div>
+
+            <div id="playlist-detail-content" class="hidden">
+              <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+                <h2 id="playlist-detail-name" style="font-size:19px"></h2>
+              </div>
+
+              <span class="lab">유튜브 링크로 추가</span>
+              <div class="addrow">
+                <input id="playlist-track-url-input" class="field" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="유튜브 링크로 추가">
+                <button id="playlist-track-url-button" class="key" type="button">추가</button>
+              </div>
+
+              <span class="lab">유튜브 검색으로 추가</span>
+              <div class="addrow">
+                <input id="playlist-track-search-input" class="field" type="text" placeholder="검색할 곡 제목" aria-label="유튜브 검색">
+                <button id="playlist-track-search-button" class="key" type="button">검색</button>
+              </div>
+              <ul id="playlist-track-search-results" class="results" aria-live="polite"></ul>
+
+              <p id="playlist-track-status" class="note" role="status" aria-live="polite"></p>
+
+              <ul id="playlist-track-list" style="margin-top:18px" aria-live="polite"></ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <footer>SUGAR DJ — 좋은 음악은 함께 들을 때 더 좋아요.</footer>
   </main>
 
   <div id="youtube-player" class="visually-hidden-player" aria-hidden="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script type="module" src="js/main.js?v=20260819-4"></script>
+  <script type="module" src="js/main.js?v=20260819-7"></script>
 </body>
 </html>

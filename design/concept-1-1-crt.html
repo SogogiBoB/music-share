@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시안 1-1 · SET 61 — Sugar DJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{
+  --walnut:#4b301c;
+  --walnut-hi:#6d4629;
+  --walnut-lo:#2f1c0f;
+  --bakelite:#e7dbc2;
+  --bakelite-hi:#f3ebd9;
+  --bakelite-lo:#d3c3a2;
+  --tube:#171009;
+  --phosphor:#ffb35c;
+  --phosphor-dim:#a86f2e;
+  --pilot:#d23a2b;
+  --ink:#2b1d10;
+  --muted:#7e6a51;
+  --seam:rgba(43,29,16,.3);
+  --font-d:"Archivo",system-ui,sans-serif;
+  --font-m:"DM Mono",ui-monospace,monospace;
+  --font-crt:"VT323",ui-monospace,monospace;
+  --font-b:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;color:var(--ink);font-family:var(--font-b);line-height:1.5;
+  background:
+    radial-gradient(70rem 50rem at 50% -20%,rgba(255,179,92,.13),transparent 60%),
+    repeating-linear-gradient(92deg,rgba(0,0,0,.16) 0 3px,rgba(255,255,255,.03) 3px 7px,rgba(0,0,0,.09) 7px 13px,transparent 13px 26px),
+    linear-gradient(176deg,var(--walnut-hi),var(--walnut) 45%,var(--walnut-lo));
+  background-attachment:fixed;-webkit-font-smoothing:antialiased;
+}
+button,input,select{font:inherit;color:inherit}
+button{border:0;background:none}button:not(:disabled){cursor:pointer}
+:focus-visible{outline:2px solid var(--pilot);outline-offset:3px}
+ul{margin:0;padding:0;list-style:none}
+h1,h2,h3{margin:0;font-family:var(--font-d);font-weight:600;letter-spacing:-.01em}
+
+/* 미리보기 전용 크롬 */
+.mock-bar{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  padding:10px 18px;background:#1c1108;color:#d8c9ad;
+  font-family:var(--font-m);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.mock-bar b{color:var(--phosphor);font-weight:500}
+.mock-bar .sp{flex:1}
+.mock-bar button{padding:6px 12px;border:1px solid #40291a;color:#d8c9ad;font-family:var(--font-m);font-size:11px;letter-spacing:.12em}
+.mock-bar button[aria-pressed="true"]{background:var(--phosphor);border-color:var(--phosphor);color:#1c1108}
+
+/* 캐비닛 / 페이스플레이트 */
+.cabinet{max-width:1080px;margin:26px auto 0;padding:14px 14px 20px;
+  border-radius:18px 18px 8px 8px;
+  background:
+    repeating-linear-gradient(88deg,rgba(0,0,0,.2) 0 2px,rgba(255,255,255,.05) 2px 5px,transparent 5px 11px),
+    linear-gradient(180deg,#7a4f2e,#5b3a22 28%,#4b301c 60%,#3a2413);
+  box-shadow:0 22px 44px rgba(20,10,4,.5),inset 0 1px 0 rgba(255,222,180,.24);
+}
+.face{position:relative;background:linear-gradient(180deg,var(--bakelite-hi),var(--bakelite));
+  border:1px solid var(--seam);border-radius:9px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 2px 6px rgba(20,10,4,.35)}
+.face + .face{margin-top:12px}
+.face::before,.face::after{content:"";position:absolute;top:8px;width:7px;height:7px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#fff8ea,#8d7856);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.face::before{left:9px}.face::after{right:9px}
+.plate{display:flex;align-items:center;flex-wrap:wrap;row-gap:6px;gap:10px;padding:9px 22px;border-bottom:1px solid var(--seam);
+  background:linear-gradient(180deg,var(--bakelite-lo),#c9b795);
+  font-family:var(--font-m);font-size:10.5px;letter-spacing:.24em;text-transform:lowercase;color:#5f4d38}
+.plate .code{margin-left:auto;opacity:.7}
+.body{padding:18px 22px 20px}
+
+/* 상단 레일 */
+.rail{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:15px 22px}
+.badge{display:flex;align-items:center;gap:11px;padding:7px 14px;border-radius:3px;
+  background:linear-gradient(180deg,#cdbb9a,#b3a082);border:1px solid rgba(43,29,16,.35);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
+.badge .mk{font-family:var(--font-d);font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#3a2a18;
+  text-shadow:0 1px 0 rgba(255,255,255,.4)}
+.badge .no{font-family:var(--font-m);font-size:10px;letter-spacing:.2em;color:#6a5741}
+.rail .sp{flex:1}
+.pilot{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-m);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.pilot i{width:11px;height:11px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff9b8a,var(--pilot));
+  box-shadow:0 0 0 1px rgba(0,0,0,.3),0 0 12px 2px rgba(210,58,43,.75);animation:glow 2.6s ease-in-out infinite}
+@keyframes glow{50%{opacity:.5;box-shadow:0 0 0 1px rgba(0,0,0,.3),0 0 5px rgba(210,58,43,.4)}}
+.key{padding:9px 15px;border:1px solid var(--seam);border-radius:4px;
+  background:linear-gradient(180deg,#f0e6d1,#d8c8a8);font-family:var(--font-m);font-size:11px;letter-spacing:.1em;
+  box-shadow:0 3px 0 #a7906d,inset 0 1px 0 rgba(255,255,255,.7)}
+.key:hover:not(:disabled){background:linear-gradient(180deg,#f8f0de,#e0d1b3)}
+.key:active{transform:translateY(3px);box-shadow:0 0 0 #a7906d}
+.key-on{background:linear-gradient(180deg,#e2503f,#c0342a);border-color:#8e2118;color:#fff3ee;
+  box-shadow:0 3px 0 #8e2118,inset 0 1px 0 rgba(255,255,255,.3)}
+.key-on:hover:not(:disabled){background:linear-gradient(180deg,#ea6252,#cd3c31)}
+
+/* 로커 스위치 탭 */
+.tabs{display:flex;gap:0;padding:0 22px;background:linear-gradient(180deg,#dccdae,#cdbb9a);border-bottom:1px solid var(--seam)}
+.tabs button{padding:12px 18px;margin-bottom:-1px;border-bottom:3px solid transparent;
+  font-family:var(--font-m);font-size:12px;letter-spacing:.06em;color:#6a5741}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--pilot);
+  background:linear-gradient(180deg,rgba(255,255,255,.5),transparent)}
+
+/* ── 브라운관 ─────────────────────────────────────── */
+.deck{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+.tube-wrap{padding:20px;border-right:1px solid var(--seam);
+  background:linear-gradient(180deg,#3b2617,#241609)}
+.tube{position:relative;border-radius:26px/34px;padding:22px 24px 20px;overflow:hidden;
+  background:
+    radial-gradient(120% 130% at 50% 0%,#2a1c0e,var(--tube) 62%);
+  box-shadow:inset 0 0 44px rgba(0,0,0,.95),inset 0 0 0 2px rgba(255,214,160,.1),0 0 0 7px #1b1108,0 0 0 8px rgba(255,222,180,.14);
+  color:var(--phosphor)}
+.tube::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:
+    repeating-linear-gradient(0deg,rgba(0,0,0,.42) 0 1px,transparent 1px 3px),
+    radial-gradient(115% 105% at 50% 45%,transparent 52%,rgba(0,0,0,.75) 100%);
+  animation:flicker 5.5s steps(2) infinite}
+@keyframes flicker{0%,96%{opacity:.92}97%{opacity:.78}98%{opacity:.95}}
+.tube .status{display:flex;gap:16px;font-family:var(--font-crt);font-size:19px;letter-spacing:.1em;
+  color:var(--phosphor-dim);text-transform:uppercase}
+.tube .status span{white-space:nowrap}
+.tube .status .on{color:var(--phosphor);text-shadow:0 0 9px rgba(255,179,92,.75)}
+.tube h2{margin:10px 0 3px;font-family:var(--font-b);font-weight:700;
+  font-size:clamp(20px,2.7vw,28px);line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  text-shadow:0 0 12px rgba(255,179,92,.55),0 0 30px rgba(255,140,40,.25)}
+.tube .sub{margin:0;font-size:13px;color:var(--phosphor-dim)}
+.tube .clock{display:flex;justify-content:space-between;margin-top:15px;
+  font-family:var(--font-crt);font-size:21px;letter-spacing:.08em;text-shadow:0 0 8px rgba(255,179,92,.55)}
+.scale{position:relative;height:24px;border-top:1px solid rgba(255,179,92,.3)}
+.scale .ticks{position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,179,92,.34) 0 1px,transparent 1px 13px)}
+.scale .fill{position:absolute;top:0;left:0;height:6px;background:var(--phosphor);box-shadow:0 0 12px rgba(255,179,92,.8)}
+.scale .head{position:absolute;top:-4px;width:2px;height:17px;background:#fff2df;box-shadow:0 0 9px var(--phosphor)}
+
+/* 조작부 — VU + 노브 + 스피커 그릴 */
+.controls{padding:18px 20px 20px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+.hint{font-family:var(--font-m);font-size:10.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
+.vu{position:relative;height:82px;border:1px solid var(--seam);border-radius:6px;overflow:hidden;
+  background:linear-gradient(180deg,#f7edd6,#e3d3b0)}
+.vu .vu-face{position:absolute;inset:0;width:100%;height:100%}
+.vu .red{position:absolute;right:14px;top:12px;font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:var(--pilot)}
+.vu .lbl{position:absolute;left:14px;top:12px;font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.vu .needle{position:absolute;left:50%;bottom:4px;width:2px;height:64px;margin-left:-1px;background:#2b1d10;
+  transform-origin:50% 100%;transform:rotate(-6deg);animation:swing 3.4s ease-in-out infinite}
+.vu .needle::after{content:"";position:absolute;left:-4px;bottom:-4px;width:10px;height:10px;border-radius:50%;background:#2b1d10}
+@keyframes swing{0%,100%{transform:rotate(-18deg)}22%{transform:rotate(16deg)}44%{transform:rotate(-4deg)}66%{transform:rotate(27deg)}84%{transform:rotate(2deg)}}
+.knobs{display:flex;gap:12px}
+.knob{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-size:17px;position:relative;
+  background:radial-gradient(circle at 34% 28%,#5a3a20,#2f1d10 70%);color:#f3e3c8;
+  border:1px solid #1d1108;box-shadow:0 4px 0 #1d1108,inset 0 1px 0 rgba(255,214,160,.28)}
+.knob:active{transform:translateY(4px);box-shadow:0 0 0 #1d1108}
+.knob-main{background:radial-gradient(circle at 34% 28%,#e2503f,#8e2118 72%)}
+.grille{height:46px;border:1px solid var(--seam);border-radius:5px;
+  background:
+    repeating-linear-gradient(0deg,rgba(43,29,16,.34) 0 2px,transparent 2px 5px),
+    repeating-linear-gradient(90deg,rgba(43,29,16,.2) 0 2px,transparent 2px 5px),
+    linear-gradient(180deg,#cdbb9a,#b6a382)}
+
+/* ── 내 재생목록 → 대기열에 넣기 ───────────────────── */
+.pick{margin:0 0 16px;padding:13px 14px 14px;border:1px solid var(--seam);border-radius:6px;
+  background:linear-gradient(180deg,#f2e8d3,#e2d3b6)}
+.pick-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.pick-head .hint{margin-right:auto}
+.pick-head .field{max-width:250px;min-height:36px}
+.pick-list{max-height:184px;overflow:auto;border:1px solid var(--seam);border-radius:4px;background:#fdf8ec}
+.pick-list li{display:flex;align-items:center;gap:12px;padding:8px 11px}
+.pick-list li + li{border-top:1px solid rgba(43,29,16,.12)}
+.pick-list .no{font-family:var(--font-m);font-size:11px;color:var(--muted);width:20px;flex:none}
+.pick-list .tt{flex:1;min-width:0;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-add{flex:none;padding:5px 11px;font-size:10.5px;letter-spacing:.06em}
+.pick-add:disabled{opacity:.45;box-shadow:none;cursor:default}
+.pick-foot{display:flex;align-items:center;gap:10px;margin-top:10px}
+.pick-foot .note{margin:0;margin-right:auto}
+.strip .to-room{flex:none;padding:5px 10px;font-size:10.5px;letter-spacing:.06em}
+.strip .to-room:disabled{opacity:.45;box-shadow:none;cursor:default}
+.dj-hint{margin:14px 0 0;padding:11px 13px;border:1px dashed var(--seam);border-radius:5px;
+  font-size:12.5px;color:#5f4d38;background:rgba(255,255,255,.4)}
+
+/* ── 역할별 노출: DJ / 리스너(회원) / 게스트 ───────── */
+body:not(.role-dj) .dj-only{display:none!important}
+body.role-guest .member-only{display:none!important}
+body.role-dj .listener-only{display:none!important}
+body:not(.role-dj) .deck{grid-template-columns:minmax(0,1.9fr) minmax(0,1fr)}
+.role-tag{margin-left:7px;padding:1px 6px;border:1px solid var(--seam);border-radius:2px;
+  font-family:var(--font-m);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.presets .preset.is-guest .cap{background:linear-gradient(180deg,#6f5b43,#453729);color:#eadfc7}
+.listener-note{margin:0;padding:13px 15px;border:1px dashed var(--seam);border-radius:6px;
+  font-size:13.5px;line-height:1.55;color:#5f4d38;background:rgba(255,255,255,.4)}
+.listener-note b{color:var(--ink)}
+.gate-panel{display:none}
+.gate-panel.is-on{display:block}
+.gate-limits{margin:14px 0 0;padding:12px 14px;border:1px solid var(--seam);border-radius:5px;
+  background:rgba(255,255,255,.45);font-size:12.5px;line-height:1.7;color:#5f4d38}
+.gate-limits li{position:relative;padding-left:14px}
+.gate-limits li::before{content:"·";position:absolute;left:4px}
+
+/* ── 볼륨: 마스터 노브 × 내 노브 ─────────────────── */
+.mixer{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:18px;align-items:start}
+.vk{display:flex;flex-direction:column;align-items:center;gap:9px;padding:14px 12px 12px;
+  border:1px solid var(--seam);border-radius:6px;background:linear-gradient(180deg,#f2e8d3,#e0d0b0);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.vk-name{font-family:var(--font-m);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink)}
+.vk-tag{font-family:var(--font-m);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center}
+.vk-dial{position:relative;width:112px;height:112px}
+.vk-arc{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.vk-arc-bg{fill:none;stroke:rgba(43,29,16,.22);stroke-width:5;stroke-linecap:round}
+.vk-arc-fill{fill:none;stroke:var(--phosphor);stroke-width:5;stroke-linecap:round;
+  filter:drop-shadow(0 0 4px rgba(255,179,92,.85));transition:stroke-dashoffset 90ms linear}
+.vk-ticks line{stroke:#2b1d10}
+.vk-cap{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;
+  background:radial-gradient(circle at 34% 26%,#6b4526,#2f1d10 72%);
+  border:1px solid #1d1108;box-shadow:0 3px 0 #1d1108,inset 0 1px 0 rgba(255,214,160,.3)}
+.vk-cap i{position:absolute;left:50%;top:7px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;
+  background:#f3e3c8;box-shadow:0 0 6px rgba(255,179,92,.6)}
+.vk-cap{transform-origin:50% 50%}
+.vk-input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize}
+.vk-read{display:flex;align-items:baseline;gap:6px;padding:3px 12px;border-radius:4px;
+  background:linear-gradient(180deg,#241609,#150c05);color:var(--phosphor);
+  font-family:var(--font-crt);font-size:24px;line-height:1.15;letter-spacing:.06em;
+  text-shadow:0 0 8px rgba(255,179,92,.6)}
+.vk-read small{font-family:var(--font-m);font-size:9px;letter-spacing:.14em;color:var(--phosphor-dim)}
+.vk .key{padding:6px 12px}
+.vk.is-muted .vk-arc-fill{stroke:#8f8168;filter:none}
+.vk.is-muted .vk-read{color:var(--pilot);text-shadow:0 0 8px rgba(210,58,43,.6)}
+.vk.is-locked{opacity:.62;background:linear-gradient(180deg,#e4dac6,#cfc0a4)}
+.vk.is-locked .vk-input{cursor:not-allowed}
+.vk.is-locked .vk-cap{box-shadow:0 3px 0 #1d1108}
+
+.out{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:14px 16px;
+  border:1px solid var(--seam);border-radius:6px;background:linear-gradient(180deg,#3b2617,#241609)}
+.out-name{font-family:var(--font-m);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--phosphor-dim)}
+.out-num{font-family:var(--font-crt);font-size:52px;line-height:.9;color:var(--phosphor);
+  text-shadow:0 0 14px rgba(255,179,92,.6)}
+.out-bar{height:9px;border-radius:2px;background:rgba(255,179,92,.16);overflow:hidden}
+.out-bar i{display:block;height:100%;background:var(--phosphor);box-shadow:0 0 10px rgba(255,179,92,.8);transition:width 90ms linear}
+.out-calc{font-family:var(--font-crt);font-size:18px;letter-spacing:.06em;color:var(--phosphor-dim)}
+.viewsw{display:flex;gap:0;margin-left:auto;border:1px solid rgba(43,29,16,.35);border-radius:3px;overflow:hidden}
+.viewsw button{padding:3px 9px;white-space:nowrap;font-family:var(--font-m);font-size:9.5px;letter-spacing:.12em;color:#6a5741;
+  background:linear-gradient(180deg,#e0d0b0,#cdbb9a)}
+.viewsw button[aria-pressed="true"]{background:linear-gradient(180deg,#3b2617,#241609);color:var(--phosphor)}
+
+/* 프리셋 개인 볼륨 */
+.presets .preset{flex-direction:column;align-items:stretch;gap:8px}
+.preset-top{display:flex;align-items:center;gap:10px}
+.preset-vol{display:flex;align-items:center;gap:8px}
+.preset-vol .sc{position:relative;flex:1;min-width:0;height:9px;border-radius:2px;
+  background:rgba(43,29,16,.16);box-shadow:inset 0 1px 2px rgba(43,29,16,.3)}
+.preset-vol .sc i{position:absolute;inset:0 auto 0 0;border-radius:2px;background:#8a7a5f}
+.preset-vol .v{font-family:var(--font-m);font-size:10.5px;letter-spacing:.08em;color:var(--muted);width:40px;text-align:right}
+.preset.is-me .preset-vol .sc i{background:var(--phosphor);box-shadow:0 0 7px rgba(255,179,92,.7)}
+.preset.is-me .preset-vol .v{color:#a05a12}
+.preset.is-off .preset-vol .sc i{background:var(--pilot);opacity:.55}
+.preset.is-off .preset-vol .v{color:var(--pilot)}
+
+/* 프리셋 키 = 참여자 */
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(166px,1fr));gap:10px}
+.preset{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--seam);border-radius:5px;
+  background:linear-gradient(180deg,#f0e6d1,#dccdae);box-shadow:0 3px 0 #b7a382}
+.preset .cap{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:3px;
+  background:linear-gradient(180deg,#3b2617,#241609);color:var(--phosphor);font-family:var(--font-crt);font-size:19px}
+.preset .nm{display:block;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset .rl{display:block;font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.preset.is-dj{transform:translateY(3px);box-shadow:0 0 0 #b7a382;background:linear-gradient(180deg,#e0d0b0,#cdbb9a);border-color:var(--pilot)}
+.preset .lamp{margin-left:auto;width:9px;height:9px;flex:none;border-radius:50%;background:var(--pilot);box-shadow:0 0 9px var(--pilot)}
+.preset .assign{margin-left:auto;padding:4px 8px;border:1px solid var(--seam);border-radius:3px;font-family:var(--font-m);font-size:10px;letter-spacing:.08em}
+.preset .assign:hover{background:#fbf4e4}
+
+/* 큐 */
+.addrow{display:flex;gap:8px;margin-bottom:14px}
+.field{flex:1;min-width:0;min-height:42px;padding:0 12px;border:1px solid var(--seam);border-radius:4px;
+  background:#fdf8ec;font-family:var(--font-b);font-size:14px;box-shadow:inset 0 2px 3px rgba(43,29,16,.12)}
+.field::placeholder{color:#a8967a}
+.field:focus{outline:none;border-color:var(--ink)}
+.note{margin:8px 0 0;font-family:var(--font-m);font-size:11px;letter-spacing:.05em;color:var(--muted)}
+.note.ok{color:#3f6b3a}.note.err{color:#b3300f}
+
+.strip{display:flex;align-items:center;gap:14px;padding:11px 12px;border-bottom:1px solid rgba(43,29,16,.14)}
+.strip:first-child{border-top:1px solid rgba(43,29,16,.14)}
+.strip .no{font-family:var(--font-m);font-size:12px;color:var(--muted);width:22px;flex:none}
+.strip .tt{flex:1;min-width:0;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}
+.strip .cue{padding:5px 9px;border:1px solid var(--seam);border-radius:3px;background:#f4ead4;
+  font-family:var(--font-m);font-size:11px;letter-spacing:.06em;flex:none}
+.strip .rm{width:28px;height:28px;flex:none;border:1px solid transparent;border-radius:3px;color:var(--muted);font-size:15px}
+.strip .rm:hover{border-color:var(--seam);color:#b3300f}
+.strip.is-live{background:linear-gradient(90deg,rgba(255,179,92,.3),transparent 72%)}
+.strip.is-live .no{color:#a05a12}
+.strip.is-live .tt{font-weight:700}
+.strip .bulb{width:10px;height:10px;flex:none;border-radius:50%;background:rgba(43,29,16,.16)}
+.strip.is-live .bulb{background:var(--phosphor);box-shadow:0 0 10px rgba(255,179,92,.9)}
+
+/* 라이브러리 */
+.lib{display:grid;grid-template-columns:minmax(0,270px) minmax(0,1fr)}
+.lib .field{min-width:120px}
+.lib-side{border-right:1px solid var(--seam)}
+.lib-side-body{padding:16px 18px 22px}
+.lib-main{padding:18px 20px 24px}
+.bank{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid transparent;border-radius:4px;text-align:left;width:100%}
+.bank:hover{border-color:var(--seam);background:#f4ead4}
+.bank.is-on{border-color:var(--ink);background:#f4ead4}
+.bank .bk{font-family:var(--font-m);font-size:10px;letter-spacing:.14em;color:var(--muted)}
+.bank .bn{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bank .bc{font-family:var(--font-m);font-size:11px;color:var(--muted)}
+.bank-acts{display:flex;gap:6px;padding:0 10px 10px}
+.bank-acts button{font-family:var(--font-m);font-size:10px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--seam)}
+.bank-acts button:hover{color:var(--ink)}
+.results li + li{margin-top:6px}
+.results button{display:block;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--seam);border-radius:4px;background:#fdf8ec;font-size:13.5px}
+.results button:hover{background:#f4ead4}
+.move{margin-top:12px;min-height:38px;padding:0 10px;border:1px solid var(--seam);border-radius:4px;background:#fdf8ec;font-size:13px}
+.lab{display:block;margin:14px 0 5px;font-family:var(--font-m);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+
+/* 게이트 */
+.gate{max-width:520px;margin:52px auto 0}
+.gate .body{padding:24px 24px 26px}
+.gate h2{font-size:22px;margin-bottom:4px}
+.gate p.sub{margin:0 0 18px;font-size:13.5px;color:var(--muted)}
+.gate .field{width:100%}
+.gate .key{width:100%;margin-top:20px;padding:14px;text-align:center}
+.gate-tabs{display:flex;border:1px solid var(--seam);border-radius:4px;overflow:hidden}
+.gate-tabs button{flex:1;padding:11px;font-family:var(--font-m);font-size:12px;letter-spacing:.08em;color:var(--muted);
+  background:linear-gradient(180deg,#e7dbc2,#d3c3a2)}
+.gate-tabs button[aria-selected="true"]{background:linear-gradient(180deg,#3b2617,#241609);color:var(--phosphor)}
+.gate-tabs button + button{border-left:1px solid var(--seam)}
+.warmup{margin:18px 0 0;padding:14px 16px;border-radius:8px;background:linear-gradient(180deg,#241609,#150c05);
+  color:var(--phosphor);font-family:var(--font-crt);font-size:20px;letter-spacing:.08em;text-shadow:0 0 9px rgba(255,179,92,.6)}
+
+footer{max-width:1080px;margin:0 auto;padding:18px 20px 44px;
+  font-family:var(--font-m);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(240,225,200,.62)}
+.screen{display:none}.screen.is-on{display:block}
+@media (max-width:560px){
+  .tube .status span:nth-child(2){display:none}
+}
+@media (max-width:880px){
+  .deck,.lib{grid-template-columns:1fr}
+  .mixer{grid-template-columns:1fr}
+  .tube-wrap{border-right:0;border-bottom:1px solid var(--seam)}
+  .lib-side{border-right:0;border-bottom:1px solid var(--seam)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body class="role-dj">
+
+<div class="mock-bar">
+  <b>시안 1-1</b><span>set 61 · 원목 캐비닛 + 브라운관</span><span class="sp"></span>
+  <button type="button" data-go="room" aria-pressed="true">함께 듣기</button>
+  <button type="button" data-go="lib" aria-pressed="false">내 재생목록</button>
+  <button type="button" data-go="gate" aria-pressed="false">입장</button>
+  <span style="opacity:.5">|</span><span>역할</span>
+  <button type="button" data-role="dj" aria-pressed="true">DJ</button>
+  <button type="button" data-role="member" aria-pressed="false">리스너</button>
+  <button type="button" data-role="guest" aria-pressed="false">게스트</button>
+</div>
+
+<!-- ============ 함께 듣기 ============ -->
+<div class="screen is-on" id="s-room">
+<div class="cabinet">
+
+  <section class="face">
+    <div class="rail">
+      <span class="badge"><span class="mk">Sugar DJ</span><span class="no">set 61</span></span>
+      <span class="pilot"><i></i> on air</span>
+      <span class="sp"></span>
+      <span class="pilot" id="who">현재 DJ · 준현</span>
+      <button class="key key-on member-only" id="dj-claim" type="button">DJ 되기</button>
+      <button class="key" id="leave" type="button">로그아웃</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" type="button">함께 듣기</button>
+      <button class="member-only" role="tab" aria-selected="false" type="button" data-go="lib">내 재생목록</button>
+    </nav>
+  </section>
+
+  <section class="face">
+    <div class="plate">now playing<span class="code">ch–01 / sync ±0.2s</span></div>
+    <div class="deck">
+      <div class="tube-wrap">
+        <div class="tube">
+          <div class="status"><span class="on">&#9654; PLAY</span><span>SYNC LOCK</span><span>LISTENERS 05</span></div>
+          <h2>새소년 — 난춤 (Live)</h2>
+          <p class="sub">DJ 준현이 고른 곡 · 모두 같은 지점에서 듣는 중</p>
+          <div class="clock"><span>03:12</span><span>-01:29</span></div>
+          <div class="scale">
+            <div class="ticks"></div>
+            <div class="fill" style="width:68%"></div>
+            <div class="head" style="left:68%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="controls">
+        <span class="hint">output level</span>
+        <div class="vu" aria-hidden="true">
+          <span class="lbl">VU</span><span class="red">+3</span>
+          <svg class="vu-face" viewBox="0 0 200 92" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path d="M53.2,36.0 A70,70 0 0 1 114.6,19.5" fill="none" stroke="#2b1d10" stroke-width="1.4" opacity=".6"/><path d="M114.6,19.5 A70,70 0 0 1 146.8,36.0" fill="none" stroke="#c0342a" stroke-width="1.8" opacity=".8"/><line x1="63.9" y1="47.9" x2="53.2" y2="36.0" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="66.7" y1="40.5" x2="59.8" y2="30.7" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="72.8" y1="36.8" x2="67.1" y2="26.2" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="80.6" y1="37.6" x2="74.9" y2="22.6" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="86.0" y1="31.7" x2="83.1" y2="20.1" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="92.9" y1="30.4" x2="91.5" y2="18.5" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="100.0" y1="34.0" x2="100.0" y2="18.0" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="107.1" y1="30.4" x2="108.5" y2="18.5" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="114.0" y1="31.7" x2="116.9" y2="20.1" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="119.4" y1="37.6" x2="125.1" y2="22.6" stroke="#c0342a" stroke-width="2" opacity="0.85"/><line x1="127.2" y1="36.8" x2="132.9" y2="26.2" stroke="#c0342a" stroke-width="1.1" opacity="0.55"/><line x1="133.3" y1="40.5" x2="140.2" y2="30.7" stroke="#c0342a" stroke-width="1.1" opacity="0.55"/><line x1="136.1" y1="47.9" x2="146.8" y2="36.0" stroke="#c0342a" stroke-width="2" opacity="0.85"/></svg>
+          <div class="needle"></div>
+        </div>
+        <span class="hint dj-only">transport — DJ 전용</span>
+        <div class="knobs dj-only">
+          <button class="knob knob-main" type="button" aria-label="일시정지">❙❙</button>
+          <button class="knob" type="button" aria-label="다음 곡">▶❙</button>
+        </div>
+        <p class="listener-note listener-only">재생은 <b>DJ가 맞춥니다</b>. 지금 나오는 곡만 화면에 보여요.<br>내 소리 크기는 아래 <b>MY SET</b>에서 조절하세요.</p>
+        <div class="grille" aria-hidden="true"></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="face">
+    <div class="plate">volume<span class="code">master × my set</span></div>
+    <div class="body">
+      <div class="mixer">
+        <div class="vk" id="vk-master">
+          <span class="vk-name">MASTER</span>
+          <div class="vk-dial">
+            <svg class="vk-arc" viewBox="0 0 120 120" aria-hidden="true"><path class="vk-arc-bg" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4"/><path class="vk-arc-fill" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4" stroke-dasharray="235.6" stroke-dashoffset="235.6"/><g class="vk-ticks"><line x1="34.5" y1="85.5" x2="28.2" y2="91.8" stroke-width="2.2" opacity="0.85"/><line x1="22.9" y1="72.1" x2="17.2" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="21.5" y1="53.9" x2="15.6" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="28.4" y1="37.1" x2="23.6" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="42.3" y1="25.3" x2="39.6" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="60.0" y1="24.0" x2="60.0" y2="15.0" stroke-width="2.2" opacity="0.85"/><line x1="77.7" y1="25.3" x2="80.4" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="91.6" y1="37.1" x2="96.4" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="98.5" y1="53.9" x2="104.4" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="97.1" y1="72.1" x2="102.8" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="85.5" y1="85.5" x2="91.8" y2="91.8" stroke-width="2.2" opacity="0.85"/></g></svg>
+            <div class="vk-cap"><i></i></div>
+            <input class="vk-input" type="range" min="0" max="100" value="85" aria-label="MASTER 볼륨">
+          </div>
+          <span class="vk-read"><span class="vk-num">85</span><small>/100</small></span>
+          <span class="vk-tag">DJ 전용 · 방 전체 기준</span>
+          <button class="key vk-mute" type="button">음소거</button>
+        </div>
+        <div class="vk" id="vk-mine">
+          <span class="vk-name">MY SET</span>
+          <div class="vk-dial">
+            <svg class="vk-arc" viewBox="0 0 120 120" aria-hidden="true"><path class="vk-arc-bg" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4"/><path class="vk-arc-fill" d="M24.6,95.4 A50,50 0 1 1 95.4,95.4" stroke-dasharray="235.6" stroke-dashoffset="235.6"/><g class="vk-ticks"><line x1="34.5" y1="85.5" x2="28.2" y2="91.8" stroke-width="2.2" opacity="0.85"/><line x1="22.9" y1="72.1" x2="17.2" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="21.5" y1="53.9" x2="15.6" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="28.4" y1="37.1" x2="23.6" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="42.3" y1="25.3" x2="39.6" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="60.0" y1="24.0" x2="60.0" y2="15.0" stroke-width="2.2" opacity="0.85"/><line x1="77.7" y1="25.3" x2="80.4" y2="19.9" stroke-width="1.2" opacity="0.5"/><line x1="91.6" y1="37.1" x2="96.4" y2="33.5" stroke-width="1.2" opacity="0.5"/><line x1="98.5" y1="53.9" x2="104.4" y2="53.0" stroke-width="1.2" opacity="0.5"/><line x1="97.1" y1="72.1" x2="102.8" y2="73.9" stroke-width="1.2" opacity="0.5"/><line x1="85.5" y1="85.5" x2="91.8" y2="91.8" stroke-width="2.2" opacity="0.85"/></g></svg>
+            <div class="vk-cap"><i></i></div>
+            <input class="vk-input" type="range" min="0" max="100" value="80" aria-label="MY SET 볼륨">
+          </div>
+          <span class="vk-read"><span class="vk-num">80</span><small>/100</small></span>
+          <span class="vk-tag">내 기기에서만 적용</span>
+          <button class="key vk-mute" type="button">음소거</button>
+        </div>
+        <div class="out">
+          <span class="out-name">실제 출력</span>
+          <span class="out-num" id="out-num">68</span>
+          <div class="out-bar"><i id="out-bar" style="width:68%"></i></div>
+          <span class="out-calc" id="out-calc">MASTER 85 &times; MY 80</span>
+        </div>
+      </div>
+      <p class="note" id="mix-note">마스터는 DJ만 돌립니다. 리스너 화면에서는 잠긴 채 값만 보입니다.</p>
+    </div>
+  </section>
+
+  <section class="face">
+    <div class="plate">presets — 함께 듣는 중<span class="code">회원 3 · 게스트 2</span></div>
+    <div class="body">
+      <ul class="presets">
+        <li class="preset" data-role="dj" data-vol="80" data-name="준현"><div class="preset-top"><span class="cap">준</span><span><span class="nm">준현</span><span class="rl"></span></span><i class="lamp" aria-label="DJ"></i></div><div class="preset-vol"><span class="sc"><i style="width:80%"></i></span><span class="v">80</span></div></li>
+        <li class="preset" data-role="member" data-vol="65" data-name="민지"><div class="preset-top"><span class="cap">민</span><span><span class="nm">민지</span><span class="rl"></span></span><button class="assign dj-only" type="button">DJ 위임</button></div><div class="preset-vol"><span class="sc"><i style="width:65%"></i></span><span class="v">65</span></div></li>
+        <li class="preset" data-role="member" data-vol="100" data-name="태오"><div class="preset-top"><span class="cap">태</span><span><span class="nm">태오</span><span class="rl"></span></span><button class="assign dj-only" type="button">DJ 위임</button></div><div class="preset-vol"><span class="sc"><i style="width:100%"></i></span><span class="v">100</span></div></li>
+        <li class="preset is-guest" data-role="guest" data-vol="45" data-name="서윤"><div class="preset-top"><span class="cap">서</span><span><span class="nm">서윤</span><span class="rl"></span></span></div><div class="preset-vol"><span class="sc"><i style="width:45%"></i></span><span class="v">45</span></div></li>
+        <li class="preset is-off is-guest" data-role="guest" data-vol="0" data-name="하람"><div class="preset-top"><span class="cap">하</span><span><span class="nm">하람</span><span class="rl"></span></span></div><div class="preset-vol"><span class="sc"><i style="width:0%"></i></span><span class="v">음소거</span></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="face dj-only">
+    <div class="plate">queue<span class="code"><span id="queue-count">07</span> tracks</span></div>
+    <div class="body">
+      <div class="addrow">
+        <input class="field" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="추가할 유튜브 링크">
+        <button class="key" type="button">추가</button>
+      </div>
+      <p class="note ok" id="queue-note">재생목록에 추가했어요.</p>
+
+      <div class="pick">
+        <div class="pick-head">
+          <span class="hint">from my library — 내 재생목록에서 대기열로</span>
+          <select class="field" id="pick-select" aria-label="가져올 재생목록">
+            <option>새벽 드라이브</option>
+            <option>집중용 로파이</option>
+            <option>주말 파티</option>
+          </select>
+        </div>
+        <ul class="pick-list" id="pick-list"></ul>
+        <div class="pick-foot">
+          <p class="note" id="pick-note"></p>
+          <button class="key" id="pick-all" type="button">남은 곡 전부 대기열로</button>
+        </div>
+      </div>
+
+      <ul id="queue-list" style="margin-top:14px">
+        <li class="strip is-live"><span class="no">03</span><i class="bulb"></i><span class="tt">새소년 — 난춤 (Live)</span><span class="cue">재생 중</span><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">04</span><i class="bulb"></i><button class="tt" type="button">검정치마 — Everything</button><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">05</span><i class="bulb"></i><button class="tt" type="button">실리카겔 — NO PAIN</button><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">06</span><i class="bulb"></i><button class="tt" type="button">Tom Misch — Movie</button><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        <li class="strip"><span class="no">07</span><i class="bulb"></i><button class="tt" type="button">혁오 — TOMBOY</button><button class="cue" type="button">cue</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+      </ul>
+    </div>
+  </section>
+</div>
+<footer>이 방의 DJ가 곡을 고르고 재생 위치를 맞춥니다 · sugar dj set 61</footer>
+</div>
+
+<!-- ============ 내 재생목록 ============ -->
+<div class="screen" id="s-lib">
+<div class="cabinet">
+  <section class="face">
+    <div class="rail">
+      <span class="badge"><span class="mk">Sugar DJ</span><span class="no">library</span></span>
+      <span class="sp"></span>
+      <button class="key" type="button">로그아웃</button>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="false" type="button" data-go="room">함께 듣기</button>
+      <button role="tab" aria-selected="true" type="button">내 재생목록</button>
+    </nav>
+  </section>
+
+  <section class="face">
+    <div class="plate">search<span class="code">곡 제목으로 전체 재생목록 검색</span></div>
+    <div class="body">
+      <div class="addrow">
+        <input class="field" type="text" placeholder="곡 제목으로 재생목록 검색" aria-label="곡 제목으로 재생목록 검색">
+        <button class="key" type="button">검색</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="face">
+    <div class="lib">
+      <div class="lib-side">
+        <div class="plate">banks<span class="code">04</span></div>
+        <div class="lib-side-body">
+          <div class="addrow">
+            <input class="field" type="text" placeholder="새 재생목록 이름" maxlength="40" aria-label="새 재생목록 이름">
+            <button class="key" type="button">＋</button>
+          </div>
+          <ul>
+            <li><button class="bank is-on" type="button"><span class="bk">a</span><span class="bn">새벽 드라이브</span><span class="bc">12</span></button>
+              <div class="bank-acts"><button type="button">이름변경</button><button type="button">삭제</button></div></li>
+            <li><button class="bank" type="button"><span class="bk">b</span><span class="bn">집중용 로파이</span><span class="bc">31</span></button></li>
+            <li><button class="bank" type="button"><span class="bk">c</span><span class="bn">주말 파티</span><span class="bc">08</span></button></li>
+            <li><button class="bank" type="button"><span class="bk">d</span><span class="bn">혼자 듣는 밤</span><span class="bc">19</span></button></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="lib-main">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+          <h2 style="font-size:19px">새벽 드라이브</h2>
+          <button class="key to-room-all dj-only" type="button" style="margin-left:auto">이 목록 전부 대기열로</button>
+        </div>
+        <p class="note">12곡 · 마지막 수정 8월 19일</p>
+
+        <span class="lab">유튜브 링크로 추가</span>
+        <div class="addrow"><input class="field" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="유튜브 링크로 추가"><button class="key" type="button">추가</button></div>
+
+        <span class="lab">유튜브 검색으로 추가</span>
+        <div class="addrow"><input class="field" type="text" placeholder="검색할 곡 제목" aria-label="유튜브 검색"><button class="key" type="button">검색</button></div>
+        <ul class="results">
+          <li><button type="button">아이유 — 밤편지</button></li>
+          <li><button type="button">잔나비 — 주저하는 연인들을 위해</button></li>
+        </ul>
+
+        <ul style="margin-top:18px" id="lib-list">
+          <li class="strip"><span class="no">01</span><span class="tt">검정치마 — Everything</span><button class="key to-room dj-only" type="button">＋ 대기열</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+          <li class="strip"><span class="no">02</span><span class="tt">새소년 — 난춤 (Live)</span><button class="key to-room dj-only" type="button">＋ 대기열</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+          <li class="strip"><span class="no">03</span><span class="tt">Men I Trust — Show Me How</span><button class="key to-room dj-only" type="button">＋ 대기열</button><button class="rm" type="button" aria-label="삭제">×</button></li>
+        </ul>
+        <p class="dj-hint listener-only member-only">DJ가 되면 이 목록의 곡을 바로 대기열에 넣을 수 있어요.</p>
+
+        <select class="move" aria-label="다른 재생목록으로 이동">
+          <option>다른 재생목록으로 이동</option>
+          <option>집중용 로파이</option>
+          <option>주말 파티</option>
+        </select>
+      </div>
+    </div>
+  </section>
+</div>
+<footer>sugar dj — library</footer>
+</div>
+
+<!-- ============ 로그인 ============ -->
+<div class="screen" id="s-gate">
+<div class="cabinet gate">
+  <section class="face">
+    <div class="plate">access<span class="code">sugar dj — set 61</span></div>
+    <div class="body">
+      <div class="gate-tabs" role="tablist">
+        <button role="tab" aria-selected="true" type="button" data-gate="login">로그인</button>
+        <button role="tab" aria-selected="false" type="button" data-gate="signup">회원가입</button>
+        <button role="tab" aria-selected="false" type="button" data-gate="guest">게스트</button>
+      </div>
+
+      <div class="gate-panel is-on" id="gate-login" role="tabpanel">
+        <h2 style="margin-top:20px">전원을 켜고 들어오세요</h2>
+        <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
+        <span class="lab">email</span>
+        <input class="field" type="email" placeholder="이메일">
+        <span class="lab">password</span>
+        <input class="field" type="password" placeholder="비밀번호">
+        <p class="note err" style="margin-top:10px">이메일 또는 비밀번호를 확인해 주세요.</p>
+        <button class="key key-on" type="button">로그인</button>
+      </div>
+
+      <div class="gate-panel" id="gate-signup" role="tabpanel">
+        <h2 style="margin-top:20px">계정을 만들면<br>DJ가 될 수 있어요</h2>
+        <p class="sub">회원만 DJ 되기와 내 재생목록을 쓸 수 있습니다.</p>
+        <span class="lab">email</span>
+        <input class="field" type="email" placeholder="이메일">
+        <span class="lab">nickname</span>
+        <input class="field" type="text" maxlength="20" placeholder="닉네임">
+        <span class="lab">password</span>
+        <input class="field" type="password" placeholder="비밀번호 (6자 이상)">
+        <button class="key key-on" type="button">가입하고 입장하기</button>
+      </div>
+
+      <div class="gate-panel" id="gate-guest" role="tabpanel">
+        <h2 style="margin-top:20px">가입 없이<br>듣기만 할래요</h2>
+        <p class="sub">닉네임만 정하면 바로 들어옵니다.</p>
+        <span class="lab">nickname</span>
+        <input class="field" type="text" maxlength="20" placeholder="닉네임">
+        <ul class="gate-limits">
+          <li>DJ가 될 수 없고, DJ 위임도 받지 않습니다</li>
+          <li>내 재생목록을 만들거나 볼 수 없습니다</li>
+          <li>듣기와 내 소리 크기 조절은 그대로 됩니다</li>
+        </ul>
+        <button class="key key-on" type="button">게스트로 입장</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="face">
+    <div class="plate">sound check<span class="code">브라우저 재생 정책</span></div>
+    <div class="body">
+      <p style="margin:0 0 4px;font-size:14px">처음 한 번만 눌러 주세요.</p>
+      <p class="note">브라우저가 자동 재생을 막기 때문에 시작 버튼이 필요합니다.</p>
+      <p class="warmup">&gt; WARMING UP TUBES...</p>
+      <button class="key" type="button" style="width:100%;margin-top:16px;padding:14px;text-align:center">듣기 시작</button>
+    </div>
+  </section>
+</div>
+<footer>sugar dj — set 61</footer>
+</div>
+
+<script>
+const screens={room:document.getElementById("s-room"),lib:document.getElementById("s-lib"),gate:document.getElementById("s-gate")};
+function go(n){Object.entries(screens).forEach(([k,el])=>el.classList.toggle("is-on",k===n));
+document.querySelectorAll(".mock-bar [data-go]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.go===n)));window.scrollTo(0,0);}
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{location.hash=b.dataset.go;go(b.dataset.go)}));
+function fromHash(){const h=location.hash.slice(1);if(screens[h])go(h);}
+addEventListener("hashchange",fromHash);fromHash();
+/* ── 볼륨 노브 ─────────────────────────────── */
+const ARC = 235.6;
+function knobState(el){return {v:+el.querySelector(".vk-input").value, muted:el.classList.contains("is-muted")};}
+function paint(el){
+  const inp=el.querySelector(".vk-input"), v=+inp.value, muted=el.classList.contains("is-muted");
+  el.querySelector(".vk-cap").style.transform="rotate("+(-135+270*v/100)+"deg)";
+  el.querySelector(".vk-arc-fill").style.strokeDashoffset=String(ARC*(1-(muted?0:v)/100));
+  el.querySelector(".vk-num").textContent = muted ? "MUTE" : v;
+}
+const master=document.getElementById("vk-master"), mine=document.getElementById("vk-mine");
+function paintOut(){
+  const m=knobState(master), k=knobState(mine);
+  const out = (m.muted||k.muted) ? 0 : Math.round(m.v*k.v/100);
+  document.getElementById("out-num").textContent=out;
+  document.getElementById("out-bar").style.width=out+"%";
+  document.getElementById("out-calc").textContent =
+    (m.muted?"MASTER MUTE":"MASTER "+m.v) + " \u00d7 " + (k.muted?"MY MUTE":"MY "+k.v);
+  const me=document.querySelector(".preset.is-me");
+  if(me){me.classList.toggle("is-off",k.muted);
+    me.querySelector(".preset-vol .sc i").style.width=(k.muted?0:k.v)+"%";
+    me.querySelector(".preset-vol .v").textContent=k.muted?"음소거":k.v;}
+}
+[master,mine].forEach(el=>{
+  const inp=el.querySelector(".vk-input");
+  inp.addEventListener("input",()=>{el.classList.remove("is-muted");paint(el);paintOut();});
+  el.querySelector(".vk-mute").addEventListener("click",()=>{el.classList.toggle("is-muted");paint(el);paintOut();});
+  paint(el);
+});
+paintOut();
+
+/* ── 역할 전환 (DJ / 리스너 / 게스트) ─────────────── */
+const ROLE_LABEL={dj:"dj",member:"리스너",guest:"게스트"};
+const ME={dj:"준현",member:"민지",guest:"하람"};
+function applyRole(role){
+  document.body.className="role-"+role;
+  document.querySelectorAll(".mock-bar [data-role]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.role===role)));
+
+  document.querySelectorAll(".presets .preset").forEach(li=>{
+    const r=li.dataset.role, isMe=ME[role]===li.dataset.name, v=+li.dataset.vol;
+    li.classList.toggle("is-me",isMe);
+    li.classList.toggle("is-off",v===0);
+    li.querySelector(".preset-vol .sc i").style.width=v+"%";
+    li.querySelector(".preset-vol .v").textContent=v===0?"음소거":v;
+    li.querySelector(".rl").textContent=(isMe?"나 · ":"")+ROLE_LABEL[r];
+  });
+
+  document.getElementById("who").textContent =
+    role==="dj" ? "현재 DJ · 나" : "현재 DJ · 준현";
+  document.getElementById("dj-claim").textContent = role==="dj" ? "DJ 내려놓기" : "DJ 되기";
+  document.getElementById("leave").textContent = role==="guest" ? "나가기" : "로그아웃";
+
+  const locked = role!=="dj";
+  master.classList.toggle("is-locked",locked);
+  master.querySelector(".vk-input").disabled=locked;
+  master.querySelector(".vk-mute").disabled=locked;
+  master.querySelector(".vk-tag").textContent = locked ? "DJ만 조절 · 잠김" : "DJ 전용 · 방 전체 기준";
+  document.getElementById("mix-note").textContent =
+    role==="dj" ? "마스터는 DJ만 돌립니다. 리스너·게스트 화면에서는 잠긴 채 값만 보입니다."
+    : role==="member" ? "마스터는 DJ가 돌린 값이 그대로 내려옵니다. 내 볼륨만 조절할 수 있어요."
+    : "게스트도 내 볼륨은 조절할 수 있어요. 마스터는 DJ만 돌립니다.";
+
+  const libBtn=document.querySelector('.mock-bar [data-go="lib"]');
+  libBtn.disabled = role==="guest";
+  libBtn.style.opacity = role==="guest" ? ".4" : "";
+  libBtn.title = role==="guest" ? "게스트는 내 재생목록을 쓸 수 없습니다" : "";
+  if(role==="guest" && screens.lib.classList.contains("is-on")) go("room");
+
+  paintOut();
+}
+document.querySelectorAll(".mock-bar [data-role]").forEach(b=>b.addEventListener("click",()=>applyRole(b.dataset.role)));
+applyRole("dj");
+
+/* ── 내 재생목록 → 대기열로 넣기 ───────────────── */
+const LIB={
+  "새벽 드라이브":["검정치마 — Everything","새소년 — 난춤 (Live)","Men I Trust — Show Me How","오존 — 눈","아이유 — 밤편지"],
+  "집중용 로파이":["Idealism — Controlla","Nujabes — Feather","j^p^n — kaminari"],
+  "주말 파티":["실리카겔 — NO PAIN","혁오 — TOMBOY","LEENALCHI — 범 내려온다"]
+};
+const queueList=document.getElementById("queue-list");
+const pickList=document.getElementById("pick-list");
+const pickSelect=document.getElementById("pick-select");
+
+function queueTitles(){
+  return new Set([...queueList.querySelectorAll(".tt")].map(e=>e.textContent.trim()));
+}
+const PLAYED=2;  /* 이미 지나간 곡 수 — 번호가 03부터 시작하는 이유 */
+function syncCount(){
+  const n=queueList.children.length+PLAYED;
+  document.getElementById("queue-count").textContent=String(n).padStart(2,"0");
+}
+function addToQueue(title){
+  const inQ=queueTitles();
+  if(inQ.has(title)) return false;
+  const li=document.createElement("li");
+  li.className="strip";
+  const no=String(queueList.children.length+PLAYED+1).padStart(2,"0");
+  li.innerHTML='<span class="no">'+no+'</span><i class="bulb"></i>'
+    +'<button class="tt" type="button"></button>'
+    +'<button class="cue" type="button">cue</button>'
+    +'<button class="rm" type="button" aria-label="삭제">×</button>';
+  li.querySelector(".tt").textContent=title;
+  queueList.appendChild(li);
+  syncCount();
+  document.getElementById("queue-note").textContent='"'+title+'" 을(를) 대기열에 넣었어요.';
+  return true;
+}
+function renderPick(){
+  const name=pickSelect.value, inQ=queueTitles();
+  pickList.innerHTML="";
+  LIB[name].forEach((t,i)=>{
+    const li=document.createElement("li");
+    li.innerHTML='<span class="no">'+String(i+1).padStart(2,"0")+'</span>'
+      +'<span class="tt"></span><button class="key pick-add" type="button"></button>';
+    li.querySelector(".tt").textContent=t;
+    const b=li.querySelector(".pick-add"), already=inQ.has(t);
+    b.textContent=already?"대기열에 있음":"＋ 대기열";
+    b.disabled=already;
+    b.addEventListener("click",()=>{addToQueue(t);renderPick();syncLibButtons();});
+    pickList.appendChild(li);
+  });
+  const left=LIB[name].filter(t=>!inQ.has(t)).length;
+  document.getElementById("pick-note").textContent =
+    left ? name+" · 아직 대기열에 없는 곡 "+left+"개" : name+" · 전부 대기열에 들어가 있어요";
+  document.getElementById("pick-all").disabled = left===0;
+}
+pickSelect.addEventListener("change",renderPick);
+document.getElementById("pick-all").addEventListener("click",()=>{
+  LIB[pickSelect.value].forEach(addToQueue);
+  renderPick();syncLibButtons();
+});
+
+/* 내 재생목록 화면의 곡별 버튼 */
+function syncLibButtons(){
+  const inQ=queueTitles();
+  document.querySelectorAll("#lib-list .strip").forEach(li=>{
+    const t=li.querySelector(".tt").textContent.trim(), b=li.querySelector(".to-room");
+    if(!b) return;
+    b.disabled=inQ.has(t);
+    b.textContent=inQ.has(t)?"대기열에 있음":"＋ 대기열";
+  });
+}
+document.querySelectorAll("#lib-list .to-room").forEach(b=>b.addEventListener("click",()=>{
+  addToQueue(b.closest(".strip").querySelector(".tt").textContent.trim());
+  syncLibButtons();renderPick();
+}));
+document.querySelector(".to-room-all")?.addEventListener("click",()=>{
+  document.querySelectorAll("#lib-list .strip .tt").forEach(e=>addToQueue(e.textContent.trim()));
+  syncLibButtons();renderPick();
+});
+syncCount();renderPick();syncLibButtons();
+
+/* 입장 화면 탭 */
+document.querySelectorAll(".gate-tabs button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".gate-tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  document.querySelectorAll(".gate-panel").forEach(pn=>pn.classList.toggle("is-on",pn.id==="gate-"+b.dataset.gate));
+}));
+</script>
+</body>
+</html>

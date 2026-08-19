@@ -50,6 +50,28 @@ export function isCurrentDj(settingsRow, uid) {
   return settingsRow?.dj_uid === uid;
 }
 
+export function getDjRoleViewState(settingsRow, uid) {
+  const amDj = isCurrentDj(settingsRow, uid);
+  return { amDj, showClaimButton: !amDj };
+}
+
+export function getRoomViewState({ settingsRow, uid, isGuest }) {
+  const amDj = isCurrentDj(settingsRow, uid);
+  return {
+    amDj,
+    isGuest: Boolean(isGuest),
+    showClaimButton: !amDj && !isGuest,
+    showQueuePanel: amDj,
+    showTransport: amDj,
+    showLibraryTab: !isGuest,
+    canDelegate: amDj,
+  };
+}
+
+export function canDelegateTo(targetProfile) {
+  return !targetProfile?.is_guest;
+}
+
 export function isDjLeaseExpired(settingsRow, nowMs = Date.now()) {
   if (!settingsRow?.dj_uid) return false;
   const expiresAtMs = Date.parse(settingsRow.dj_lease_expires_at ?? "");

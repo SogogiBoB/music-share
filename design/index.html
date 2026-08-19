@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sugar DJ — 디자인 시안 3종</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root{--ink:#1b1a24;--muted:#6e6b7a;--line:rgba(27,26,36,.14);
+--m:"DM Mono",ui-monospace,monospace;--b:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;padding:48px 20px 80px;background:#f3f2f0;color:var(--ink);font-family:var(--b);line-height:1.6}
+.w{max-width:900px;margin:0 auto}
+.mono{font-family:var(--m);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+h1{margin:8px 0 6px;font-size:30px;letter-spacing:-.02em}
+p.lede{margin:0 0 36px;color:var(--muted);max-width:58ch}
+.card{display:block;padding:22px 24px;border:1px solid var(--line);background:#fff;text-decoration:none;color:inherit}
+.card + .card{margin-top:14px}
+.card:hover{border-color:var(--ink)}
+.card h2{margin:6px 0 8px;font-size:20px;letter-spacing:-.01em}
+.card p{margin:0 0 12px;color:var(--muted);font-size:14.5px}
+.sw{display:flex;gap:6px;margin-bottom:12px}
+.sw i{width:26px;height:26px;border:1px solid var(--line)}
+.meta{font-family:var(--m);font-size:11.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="w">
+  <span class="mono">sugar dj — design proposals</span>
+  <h1>디자인 시안 3종</h1>
+  <p class="lede">기능·화면 구성은 현재와 동일합니다. 로그인/회원가입, 청취 시작, DJ 되기·위임, 실시간 참여자, 큐 추가·삭제·재생·진행률, 내 재생목록 CRUD·검색·유튜브 검색·이동까지 세 시안 모두 들어 있습니다. 각 시안 상단의 미리보기 바로 화면을 전환하세요.</p>
+
+  <a class="card" href="concept-1-deck.html">
+    <span class="mono">시안 1</span>
+    <h2>DECK 01 — 하드웨어 콘솔</h2>
+    <div class="sw"><i style="background:#b8b5ac"></i><i style="background:#e5e3dc"></i><i style="background:#0f1410"></i><i style="background:#9ed46a"></i><i style="background:#ff5c00"></i></div>
+    <p>알루미늄 섀시에 얹은 랙 장비. 지금 나오는 곡은 초록 LCD 창에, 대기열은 믹서 채널 스트립으로 읽힙니다. DJ 조작부만 물리 키처럼 눌립니다.</p>
+    <span class="meta">Archivo + DM Mono · 시그니처: LCD 창과 눈금 진행바</span>
+  </a>
+
+  <a class="card" href="concept-1-1-crt.html">
+    <span class="mono">시안 1-1</span>
+    <h2>SET 61 — 원목 캐비닛 + 브라운관 <em style="font-style:normal;color:#b3300f">(확정)</em></h2>
+    <div class="sw"><i style="background:#4b301c"></i><i style="background:#e7dbc2"></i><i style="background:#171009"></i><i style="background:#ffb35c"></i><i style="background:#d23a2b"></i></div>
+    <p>시안 1을 옛날 라디오 겸용 TV 수상기로 옮긴 변형. 알루미늄 랙 대신 호두나무 캐비닛과 베이클라이트 페이스플레이트, LCD 대신 앰버 인광 브라운관(스캔라인·비네팅·미세 깜빡임). 참여자는 눌리는 프리셋 키, 출력은 바늘이 흔들리는 VU 미터, 아래는 스피커 그릴.</p>
+    <span class="meta">Archivo + VT323 + DM Mono · 시그니처: 앰버 브라운관과 VU 바늘 · 마스터/개인 볼륨 노브 포함</span>
+  </a>
+
+  <a class="card" href="concept-2-afterhours.html">
+    <span class="mono">시안 2</span>
+    <h2>AFTER HOURS — 클럽 플라이어</h2>
+    <div class="sw"><i style="background:#0a0c26"></i><i style="background:#2b2fd9"></i><i style="background:#7a7ff0"></i><i style="background:#ff5a47"></i><i style="background:#f2f0e6"></i></div>
+    <p>오늘 밤 공연 포스터. 재생 중인 곡이 헤드라이너처럼 가장 크게 서고, 나머지는 셋 리스트로 줄을 섭니다. 참여자는 입구 전광판을 흐릅니다.</p>
+    <span class="meta">Black Han Sans + Anton + Space Mono · 시그니처: 참여자 전광판 티커</span>
+  </a>
+
+  <a class="card" href="concept-3-sugarfm.html">
+    <span class="mono">시안 3</span>
+    <h2>SUGAR FM — 토이 라디오</h2>
+    <div class="sw"><i style="background:#e9e7ff"></i><i style="background:#ffc94d"></i><i style="background:#6fd9be"></i><i style="background:#ff6fa5"></i><i style="background:#2e2350"></i></div>
+    <p>손에 잡히는 라디오 faceplate. 진행률이 곧 튜너 다이얼이라 바늘 위치가 곡의 현재 지점입니다. 버튼은 눌리면 실제로 내려앉습니다.</p>
+    <span class="meta">Bricolage Grotesque + DM Mono · 시그니처: 진행률 = 튜너 다이얼</span>
+  </a>
+</div>
+</body>
+</html>
