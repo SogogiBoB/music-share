@@ -1,0 +1,12 @@
+{
+  "name": "sugar-dj-music-share",
+  "version": "1.0.0",
+  "description": "실시간 음악 공유 플레이어",
+  "type": "module",
+  "scripts": {
+    "generate-config": "node scripts/generate-config.js",
+    "prebuild": "node scripts/generate-config.js",
+    "build": "node scripts/generate-config.js",
+    "test": "node --test test/pure.test.mjs"
+  }
+}
