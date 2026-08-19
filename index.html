@@ -127,14 +127,18 @@
             <section id="controls-section" class="hidden" aria-label="재생 컨트롤">
               <span class="hint">transport — DJ 전용</span>
               <div class="knobs">
-                <button id="prev-button" class="knob" type="button" aria-label="이전 곡">
+                <button id="prev-button" class="knob" type="button" aria-label="이전 곡" title="이전 곡">
                   <span aria-hidden="true">❙◀</span>
                 </button>
-                <button id="play-button" class="knob knob-main" type="button" aria-label="재생">
+                <button id="play-button" class="knob knob-main" type="button" aria-label="재생" title="재생/일시정지">
                   <span aria-hidden="true">▶</span>
                 </button>
-                <button id="next-button" class="knob" type="button" aria-label="다음 곡">
+                <button id="next-button" class="knob" type="button" aria-label="다음 곡" title="다음 곡">
                   <span aria-hidden="true">▶❙</span>
+                </button>
+                <button id="repeat-button" class="knob is-off" type="button" aria-label="반복 재생 (꺼짐)" title="반복 모드 전환">
+                  <span id="repeat-icon" aria-hidden="true">🔁</span>
+                  <span id="repeat-badge" class="knob-badge hidden">1</span>
                 </button>
               </div>
             </section>
@@ -202,6 +206,13 @@
             <div class="addrow">
               <input id="youtube-url-input" class="field" type="url" inputmode="url" autocomplete="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="추가할 유튜브 링크" aria-describedby="add-track-status">
               <button id="add-track-button" class="key" type="button">추가</button>
+            </div>
+            <div id="save-to-playlist-row" class="save-to-playlist-row hidden">
+              <label class="save-check-label" for="save-to-playlist-check">
+                <input type="checkbox" id="save-to-playlist-check">
+                <span>내 재생목록에도 저장:</span>
+              </label>
+              <select id="save-to-playlist-select" class="field select-inline" disabled aria-label="저장할 내 재생목록"></select>
             </div>
             <p id="add-track-status" class="note" role="status" aria-live="polite"></p>
           </div>

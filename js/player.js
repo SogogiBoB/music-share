@@ -59,17 +59,66 @@ export function computePrevTrackAction({
   };
 }
 
+export function computeNextTrackOnEnded({
+  tracks = [],
+  currentTrackId,
+  repeatMode = "off",
+}) {
+  const currentIndex = tracks.findIndex((t) => t.id === currentTrackId);
+  if (currentIndex === -1) {
+    return { action: "stop" };
+  }
+
+  // 한곡 반복
+  if (repeatMode === "one") {
+    return {
+      action: "play",
+      trackId: currentTrackId,
+      position: 0,
+    };
+  }
+
+  // 다음 곡이 있는 경우
+  if (currentIndex + 1 < tracks.length) {
+    return {
+      action: "play",
+      trackId: tracks[currentIndex + 1].id,
+      position: 0,
+    };
+  }
+
+  // 마지막 곡이고 전체 반복인 경우
+  if (repeatMode === "all" && tracks.length > 0) {
+    return {
+      action: "play",
+      trackId: tracks[0].id,
+      position: 0,
+    };
+  }
+
+  return { action: "stop" };
+}
+
 import { supabase } from "./supabaseClient.js";
 
 let ytPlayer = null;
 let lastOutputVolume = 100;
 let playerReadyResolve;
+let onStateChangeCallback = null;
 const playerReady = new Promise((resolve) => { playerReadyResolve = resolve; });
 
-export function initializeYouTubePlayer({ YT: youtubeApi, onReady } = {}) {
+export function setPlayerStateChangeHandler(fn) {
+  onStateChangeCallback = fn;
+}
+
+export function initializeYouTubePlayer({ YT: youtubeApi, onReady, onStateChange } = {}) {
   const api = youtubeApi ?? (typeof window !== "undefined" ? window.YT : undefined);
   if (!api?.Player || ytPlayer) {
     return false;
+  }
+
+  if (onStateChange) {
+    onStateChangeCallback = onStateChange;
   }
 
   let createdPlayer;
@@ -81,6 +130,9 @@ export function initializeYouTubePlayer({ YT: youtubeApi, onReady } = {}) {
         ytPlayer = event.target ?? createdPlayer;
         playerReadyResolve(ytPlayer);
         onReady?.(ytPlayer);
+      },
+      onStateChange: (event) => {
+        onStateChangeCallback?.(event);
       },
     },
   });
@@ -197,24 +249,23 @@ export async function applyPlaybackState(state, tracks) {
   const track = tracks.find((t) => t.id === state.current_track_id);
   if (!track) return;
 
-  // fetchPlaybackState() returns raw DB columns (snake_case); computeExpectedPosition
-  // expects the camelCase shape from Task 2. Map explicitly rather than changing that
-  // function's signature.
-  const expected = computeExpectedPosition({
+  const expected = Math.max(0, computeExpectedPosition({
     isPlaying: state.is_playing,
     positionAtStart: state.position_at_start,
     serverStartedAt: state.server_started_at,
     nowMs: nowMs(),
-  });
+  }));
 
-  const current = player.getVideoData?.()?.video_id;
-  if (current !== track.youtube_id) {
+  const currentVideoId = player.getVideoData?.()?.video_id;
+  const playerState = player.getPlayerState?.();
+
+  if (currentVideoId !== track.youtube_id) {
     player.loadVideoById(track.youtube_id, expected);
-  }
-
-  const actual = player.getCurrentTime?.() ?? 0;
-  if (Math.abs(expected - actual) > 0.5) {
-    player.seekTo(expected, true);
+  } else {
+    const actual = player.getCurrentTime?.() ?? 0;
+    if ((playerState === 1 || playerState === 2) && Math.abs(expected - actual) > 0.8) {
+      player.seekTo(expected, true);
+    }
   }
 
   if (state.is_playing) player.playVideo();
@@ -227,20 +278,23 @@ export async function applyPlaybackState(state, tracks) {
 export function startDriftCorrection() {
   setInterval(async () => {
     const player = await playerReady;
-    if (!player.getCurrentTime) return;
+    if (!player.getCurrentTime || !player.getPlayerState) return;
+    const playerState = player.getPlayerState();
+    if (playerState !== 1) return; // 오직 재생 중(PLAYING=1)일 때만 보정
+
     const state = await fetchPlaybackState();
     if (!state.is_playing) return;
-    const expected = computeExpectedPosition({
+    const expected = Math.max(0, computeExpectedPosition({
       isPlaying: state.is_playing,
       positionAtStart: state.position_at_start,
       serverStartedAt: state.server_started_at,
       nowMs: nowMs(),
-    });
+    }));
     const actual = player.getCurrentTime();
-    if (Math.abs(expected - actual) > 0.5) {
+    if (Math.abs(expected - actual) > 1.0) {
       player.seekTo(expected, true);
     }
-  }, 5000);
+  }, 4000);
 }
 
 // 세션 중 로컬 시계가 밀리는 경우(절전 복귀 등)에 대비해 오프셋을 주기적으로 재측정한다.

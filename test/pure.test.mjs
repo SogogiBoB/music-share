@@ -411,4 +411,55 @@ test("재생목록에 없는 곡이면 action이 none", () => {
   assert.deepEqual(action, { action: "none" });
 });
 
+test("한곡 반복 모드(one)에서는 곡 종료 시 같은 곡 0초 재생", () => {
+  const tracks = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  const next = player.computeNextTrackOnEnded({
+    tracks,
+    currentTrackId: 2,
+    repeatMode: "one",
+  });
+  assert.deepEqual(next, { action: "play", trackId: 2, position: 0 });
+});
+
+test("전체 반복 모드(all)에서 중간 곡 종료 시 다음 곡으로 진행", () => {
+  const tracks = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  const next = player.computeNextTrackOnEnded({
+    tracks,
+    currentTrackId: 2,
+    repeatMode: "all",
+  });
+  assert.deepEqual(next, { action: "play", trackId: 3, position: 0 });
+});
+
+test("전체 반복 모드(all)에서 마지막 곡 종료 시 첫 번째 곡으로 순환", () => {
+  const tracks = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  const next = player.computeNextTrackOnEnded({
+    tracks,
+    currentTrackId: 3,
+    repeatMode: "all",
+  });
+  assert.deepEqual(next, { action: "play", trackId: 1, position: 0 });
+});
+
+test("반복 모드 꺼짐(off)에서 중간 곡 종료 시 다음 곡으로 진행", () => {
+  const tracks = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  const next = player.computeNextTrackOnEnded({
+    tracks,
+    currentTrackId: 1,
+    repeatMode: "off",
+  });
+  assert.deepEqual(next, { action: "play", trackId: 2, position: 0 });
+});
+
+test("반복 모드 꺼짐(off)에서 마지막 곡 종료 시 재생 중지", () => {
+  const tracks = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  const next = player.computeNextTrackOnEnded({
+    tracks,
+    currentTrackId: 3,
+    repeatMode: "off",
+  });
+  assert.deepEqual(next, { action: "stop" });
+});
+
+
 

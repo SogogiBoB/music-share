@@ -43,6 +43,7 @@ export async function addTrack({ url, uid }) {
     position,
   });
   if (error) throw error;
+  return { youtubeId: videoId, title };
 }
 
 export async function deleteTrack(trackId) {

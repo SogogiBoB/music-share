@@ -7,12 +7,13 @@ import {
 } from "./roles.js?v=20260820";
 import { initPresence } from "./presence.js?v=20260820";
 import { addTrack, fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js?v=20260820";
-import { fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks } from "./playlists.js?v=20260820";
+import { fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks, addTrackToPlaylist } from "./playlists.js?v=20260820";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
   djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady, getPlaybackTogglePresentation,
   startClockOffsetSync, startProgressBarUpdates, applyOutputVolume, formatClock,
-  computeExpectedPosition, computePrevTrackAction, nowMs,
+  computeExpectedPosition, computePrevTrackAction, computeNextTrackOnEnded, setPlayerStateChangeHandler,
+  syncClockOffset, nowMs,
 } from "./player.js?v=20260820-crt";
 import { computeOutputVolume, clampVolume, loadMyVolume, saveMyVolume, setMasterVolume } from "./volume.js?v=20260820";
 
@@ -88,20 +89,8 @@ function renderPresence(users, myUid, djUid, profiles) {
       top.appendChild(btn);
     }
 
-    const vol = document.createElement("div");
-    vol.className = "preset-vol";
-    const sc = document.createElement("span");
-    sc.className = "sc";
-    const fill = document.createElement("i");
-    fill.style.width = `${u.muted ? 0 : (u.volume ?? 100)}%`;
-    sc.appendChild(fill);
-    const value = document.createElement("span");
-    value.className = "v";
-    value.textContent = u.muted ? "음소거" : (u.volume ?? 100);
-    vol.append(sc, value);
-    if (u.muted) li.classList.add("is-off");
     if (u.uid === myUid) li.classList.add("is-me");
-    li.append(top, vol);
+    li.append(top);
 
     list.appendChild(li);
   }
@@ -225,10 +214,14 @@ function renderRoomAccess(settings, identity) {
 
 function updatePlaybackToggle(isPlaying) {
   const button = document.getElementById("play-button");
-  const { icon, label } = getPlaybackTogglePresentation(isPlaying);
-  button.setAttribute("aria-label", label);
-  button.dataset.state = isPlaying ? "playing" : "paused";
-  button.querySelector("span").textContent = icon;
+  if (button) {
+    const { icon, label } = getPlaybackTogglePresentation(isPlaying);
+    button.setAttribute("aria-label", label);
+    button.dataset.state = isPlaying ? "playing" : "paused";
+    const span = button.querySelector("span");
+    if (span) span.textContent = icon;
+  }
+  document.querySelector(".vu")?.classList.toggle("is-playing", Boolean(isPlaying));
 }
 
 function startDjHeartbeat() {
@@ -439,6 +432,31 @@ async function bootstrap() {
 
   if (amDj) startDjHeartbeat();
 
+  initSaveToPlaylist().catch(console.error);
+
+  async function initSaveToPlaylist() {
+    if (identity.isGuest) return;
+    const row = document.getElementById("save-to-playlist-row");
+    const select = document.getElementById("save-to-playlist-select");
+    const check = document.getElementById("save-to-playlist-check");
+    if (!row || !select || !check) return;
+
+    const playlists = await fetchPlaylists(identity.uid);
+    if (playlists.length > 0) {
+      row.classList.remove("hidden");
+      select.innerHTML = '<option value="">(재생목록 선택)</option>';
+      playlists.forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = String(p.id);
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+      check.addEventListener("change", () => {
+        select.disabled = !check.checked;
+      });
+    }
+  }
+
   document.getElementById("add-track-button").addEventListener("click", async () => {
     const input = document.getElementById("youtube-url-input");
     const button = document.getElementById("add-track-button");
@@ -455,7 +473,20 @@ async function bootstrap() {
     button.textContent = "추가 중…";
     status.textContent = "곡 정보를 확인하고 있어요.";
     try {
-      await addTrack({ url, uid: identity.uid });
+      const added = await addTrack({ url, uid: identity.uid });
+      const check = document.getElementById("save-to-playlist-check");
+      const select = document.getElementById("save-to-playlist-select");
+      if (check?.checked && select?.value && added) {
+        try {
+          await addTrackToPlaylist({
+            playlistId: Number(select.value),
+            youtubeId: added.youtubeId,
+            title: added.title,
+          });
+        } catch (saveErr) {
+          console.warn("내 재생목록 추가 실패 또는 중복:", saveErr.message);
+        }
+      }
       input.value = "";
       status.classList.add("ok");
       status.textContent = "재생목록에 추가했어요.";
@@ -477,6 +508,46 @@ async function bootstrap() {
 
   let currentTracks = await fetchTracks();
   let currentTrackId = null;
+  let repeatMode = localStorage.getItem("sugar_dj_repeat") || "off";
+
+  function updateRepeatButtonUI() {
+    const btn = document.getElementById("repeat-button");
+    const badge = document.getElementById("repeat-badge");
+    if (!btn) return;
+    btn.classList.remove("is-off", "is-all", "is-one");
+    if (repeatMode === "off") {
+      btn.classList.add("is-off");
+      btn.setAttribute("aria-label", "반복 재생 (꺼짐)");
+      badge?.classList.add("hidden");
+    } else if (repeatMode === "all") {
+      btn.classList.add("is-all");
+      btn.setAttribute("aria-label", "전체 반복");
+      badge?.classList.add("hidden");
+    } else if (repeatMode === "one") {
+      btn.classList.add("is-one");
+      btn.setAttribute("aria-label", "한곡 반복");
+      badge?.classList.remove("hidden");
+    }
+  }
+  updateRepeatButtonUI();
+
+  setPlayerStateChangeHandler(async (event) => {
+    if (event.data === 0) { // YT.PlayerState.ENDED
+      if (!amDj) return;
+      const state = await fetchPlaybackState();
+      const nextAction = computeNextTrackOnEnded({
+        tracks: currentTracks,
+        currentTrackId: state.current_track_id,
+        repeatMode,
+      });
+      if (nextAction.action === "play") {
+        await djSetTrack(nextAction.trackId);
+      } else if (nextAction.action === "stop") {
+        const duration = event.target?.getDuration?.() ?? 0;
+        await djPause(duration);
+      }
+    }
+  });
 
   async function renderLibraryPicker() {
     if (identity.isGuest) return;
@@ -613,6 +684,7 @@ async function bootstrap() {
   }
 
   if (playerOk) {
+    await syncClockOffset();
     startClockOffsetSync();
     // 최초 1회: loadVideoById 로 영상을 물려두어야 unlockAudio() 의 play/pause 가 의미를 갖는다.
     await applyState();
@@ -696,7 +768,14 @@ async function bootstrap() {
       const next = currentTracks[currentIndex + 1];
       if (next) {
         await djSetTrack(next.id);
+      } else if (repeatMode === "all" && currentTracks.length > 0) {
+        await djSetTrack(currentTracks[0].id);
       }
+    });
+    document.getElementById("repeat-button")?.addEventListener("click", () => {
+      repeatMode = repeatMode === "off" ? "all" : repeatMode === "all" ? "one" : "off";
+      localStorage.setItem("sugar_dj_repeat", repeatMode);
+      updateRepeatButtonUI();
     });
   }
 
