@@ -156,7 +156,12 @@ main#app.cabinet{
 .knob.is-off{opacity:.45}
 .knob.is-all{color:#ffb35c;border-color:var(--phosphor);box-shadow:0 3px 0 #1d1108,0 0 8px rgba(255,179,92,.5)}
 .knob.is-one{color:#ffb35c;border-color:var(--phosphor);box-shadow:0 3px 0 #1d1108,0 0 8px rgba(255,179,92,.5)}
-.knob-badge{position:absolute;top:-2px;right:-2px;width:15px;height:15px;border-radius:50%;background:#e2503f;color:#fff;font-size:9.5px;font-weight:bold;display:grid;place-items:center;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.repeat-glyph{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 0 rgba(0,0,0,.55))}
+.repeat-glyph .rg-one{display:none;stroke:none;fill:currentColor;
+  font-family:var(--font-crt);font-size:11px;font-weight:700}
+.knob.is-one .repeat-glyph .rg-one{display:block}
+.knob.is-all .repeat-glyph,.knob.is-one .repeat-glyph{filter:drop-shadow(0 0 4px rgba(255,179,92,.7))}
 .grille{height:30px;border:1px solid var(--seam);border-radius:4px;
   background:
     repeating-linear-gradient(0deg,rgba(43,29,16,.34) 0 2px,transparent 2px 5px),
@@ -671,9 +676,12 @@ footer {
 
 .visually-hidden-player {
   position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
+  left: -9999px;
+  top: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0.01;
+  pointer-events: none;
 }
 
 /* -- responsive -------------------------------------------------------------- */

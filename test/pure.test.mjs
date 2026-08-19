@@ -461,5 +461,59 @@ test("반복 모드 꺼짐(off)에서 마지막 곡 종료 시 재생 중지", (
   assert.deepEqual(next, { action: "stop" });
 });
 
+test("서버 시각이 로컬 시각보다 미래(시계 오차)여도 음수 경과시간이 발생하지 않고 시작 위치를 유지", () => {
+  // 클라이언트 로컬 시각보다 서버 시각이 2초 미래로 찍힌 경우 (음수 elapsed)
+  const futureServerStartedAt = new Date(10_000).toISOString();
+  const pos = computeExpectedPosition({
+    isPlaying: true,
+    positionAtStart: 5,
+    serverStartedAt: futureServerStartedAt,
+    nowMs: 8_000,
+  });
+  assert.equal(pos, 5);
+});
+
+test("serverStartedAt 이 유효하지 않거나 비어 있어도 NaN이 되지 않고 안전하게 시작 위치를 반환", () => {
+  assert.equal(computeExpectedPosition({ isPlaying: true, positionAtStart: 12, serverStartedAt: null }), 12);
+  assert.equal(computeExpectedPosition({ isPlaying: true, positionAtStart: 12, serverStartedAt: "invalid-date" }), 12);
+  assert.equal(computeExpectedPosition({ isPlaying: true, positionAtStart: undefined, serverStartedAt: null }), 0);
+});
 
 
+
+
+
+// ── 곡 길이를 넘어선 재생 위치 방어 ─────────────────────────────
+// 재생이 끝난 뒤에도 computeExpectedPosition 은 경과 시간을 계속 더하므로
+// position_at_start 에 곡 길이를 넘는 값이 기록될 수 있다. 그 값으로 seek/load 하면
+// YouTube 가 즉시 종료 상태로 되돌리고, DJ 의 종료 핸들러가 다시 DB 를 쓰면서
+// "몇 초 재생 후 처음으로 되돌아가는" 루프가 만들어진다.
+const { clampPositionToDuration, computeSeekTarget } = player;
+
+test("clampPositionToDuration: 곡 길이를 넘는 위치는 곡 끝으로 제한된다", () => {
+  assert.equal(clampPositionToDuration(280.1985, 186), 186);
+  assert.equal(clampPositionToDuration(100, 186), 100);
+});
+
+test("clampPositionToDuration: duration 을 모르면(0/NaN) 위치를 그대로 두되 음수는 0으로", () => {
+  assert.equal(clampPositionToDuration(120, 0), 120);
+  assert.equal(clampPositionToDuration(120, undefined), 120);
+  assert.equal(clampPositionToDuration(-5, 186), 0);
+  assert.equal(clampPositionToDuration(Number.NaN, 186), 0);
+});
+
+test("computeSeekTarget: 곡이 끝난 지점 이후로는 seek 하지 않는다(null)", () => {
+  assert.equal(computeSeekTarget({ expected: 280.1985, duration: 186 }), null);
+  assert.equal(computeSeekTarget({ expected: 186, duration: 186 }), null);
+});
+
+test("computeSeekTarget: 곡 안쪽 지점은 그대로 seek 대상이 된다", () => {
+  assert.equal(computeSeekTarget({ expected: 90, duration: 186 }), 90);
+  assert.equal(computeSeekTarget({ expected: 0, duration: 186 }), 0);
+});
+
+test("computeSeekTarget: duration 을 아직 모르면 expected 를 그대로 사용한다", () => {
+  assert.equal(computeSeekTarget({ expected: 42, duration: 0 }), 42);
+  assert.equal(computeSeekTarget({ expected: 42, duration: undefined }), 42);
+  assert.equal(computeSeekTarget({ expected: -3, duration: 186 }), 0);
+});

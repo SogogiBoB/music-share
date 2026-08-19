@@ -1,21 +1,21 @@
-import { ensureIdentity, signOut } from "./auth.js?v=20260820";
-import { initPlaylistUI } from "./playlistUI.js?v=20260820";
+import { ensureIdentity, signOut } from "./auth.js";
+import { initPlaylistUI } from "./playlistUI.js";
 import {
   takeOverDj, fetchSettings, isCurrentDj, delegateDj,
   releaseDj, heartbeatDj, fetchProfiles, subscribeSettings, isDjLeaseExpired, shouldNotifyDjTakeover,
   getRoomViewState, canDelegateTo,
-} from "./roles.js?v=20260820";
-import { initPresence } from "./presence.js?v=20260820";
-import { addTrack, fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js?v=20260820";
-import { fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks, addTrackToPlaylist } from "./playlists.js?v=20260820";
+} from "./roles.js";
+import { initPresence } from "./presence.js";
+import { addTrack, fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js";
+import { fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks, addTrackToPlaylist } from "./playlists.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
   djSetTrack, djPlay, djPause, startDriftCorrection, waitForPlayerReady, getPlaybackTogglePresentation,
   startClockOffsetSync, startProgressBarUpdates, applyOutputVolume, formatClock,
   computeExpectedPosition, computePrevTrackAction, computeNextTrackOnEnded, setPlayerStateChangeHandler,
-  syncClockOffset, nowMs,
-} from "./player.js?v=20260820-crt";
-import { computeOutputVolume, clampVolume, loadMyVolume, saveMyVolume, setMasterVolume } from "./volume.js?v=20260820";
+  syncClockOffset, nowMs, clampPositionToDuration, getLoadedDuration,
+} from "./player.js";
+import { computeOutputVolume, clampVolume, loadMyVolume, saveMyVolume, setMasterVolume } from "./volume.js";
 
 function renderNowPlaying(tracks, currentTrackId) {
   const track = tracks.find((t) => t.id === currentTrackId);
@@ -512,21 +512,17 @@ async function bootstrap() {
 
   function updateRepeatButtonUI() {
     const btn = document.getElementById("repeat-button");
-    const badge = document.getElementById("repeat-badge");
     if (!btn) return;
     btn.classList.remove("is-off", "is-all", "is-one");
     if (repeatMode === "off") {
       btn.classList.add("is-off");
       btn.setAttribute("aria-label", "반복 재생 (꺼짐)");
-      badge?.classList.add("hidden");
     } else if (repeatMode === "all") {
       btn.classList.add("is-all");
       btn.setAttribute("aria-label", "전체 반복");
-      badge?.classList.add("hidden");
     } else if (repeatMode === "one") {
       btn.classList.add("is-one");
       btn.setAttribute("aria-label", "한곡 반복");
-      badge?.classList.remove("hidden");
     }
   }
   updateRepeatButtonUI();
@@ -718,30 +714,37 @@ async function bootstrap() {
         // state.position_at_start 는 "마지막으로 재생을 시작한 시점"의 위치일 뿐,
         // 지금 실제로 어디까지 재생됐는지가 아니다. 그대로 넘기면 일시정지할 때마다
         // 경과 시간이 사라지고, 다음 재생이 그 시작 지점부터 다시 튄다.
-        const currentPosition = computeExpectedPosition({
+        // 곡이 끝난 뒤에도 경과 시간은 계속 늘어나므로, 곡 길이를 넘는 위치가
+        // position_at_start 로 저장되지 않도록 반드시 곡 끝으로 제한한다.
+        const duration = getLoadedDuration();
+        const currentPosition = clampPositionToDuration(computeExpectedPosition({
           isPlaying: state.is_playing,
           positionAtStart: state.position_at_start,
           serverStartedAt: state.server_started_at,
           nowMs: nowMs(),
-        });
+        }), duration);
         await djPause(currentPosition);
         updatePlaybackToggle(false);
       } else if (!state.current_track_id && currentTracks[0]) {
         await djSetTrack(currentTracks[0].id);
         updatePlaybackToggle(true);
       } else {
-        await djPlay(state.position_at_start);
+        // 저장된 시작 위치가 곡 끝(이후)이면 그 지점에서 재생을 재개할 수 없다.
+        // 그대로 재개하면 즉시 종료되고 종료 처리가 다시 상태를 써서 루프가 된다.
+        const duration = getLoadedDuration();
+        const resumeAt = clampPositionToDuration(state.position_at_start, duration);
+        await djPlay(duration > 0 && resumeAt >= duration - 0.5 ? 0 : resumeAt);
         updatePlaybackToggle(true);
       }
     });
     document.getElementById("prev-button")?.addEventListener("click", async () => {
       const state = await fetchPlaybackState();
-      const currentPosition = computeExpectedPosition({
+      const currentPosition = clampPositionToDuration(computeExpectedPosition({
         isPlaying: state.is_playing,
         positionAtStart: state.position_at_start,
         serverStartedAt: state.server_started_at,
         nowMs: nowMs(),
-      });
+      }), getLoadedDuration());
       const decision = computePrevTrackAction({
         tracks: currentTracks,
         currentTrackId: state.current_track_id,

@@ -137,8 +137,13 @@
                   <span aria-hidden="true">▶❙</span>
                 </button>
                 <button id="repeat-button" class="knob is-off" type="button" aria-label="반복 재생 (꺼짐)" title="반복 모드 전환">
-                  <span id="repeat-icon" aria-hidden="true">🔁</span>
-                  <span id="repeat-badge" class="knob-badge hidden">1</span>
+                  <svg id="repeat-icon" class="repeat-glyph" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="rg-line" d="M9 5 H15 A4 4 0 0 1 19 9 V11.4"/>
+                    <path class="rg-head" d="M16.6 10 L19 13 L21.4 10"/>
+                    <path class="rg-line" d="M15 19 H9 A4 4 0 0 1 5 15 V12.6"/>
+                    <path class="rg-head" d="M7.4 14 L5 11 L2.6 14"/>
+                    <text class="rg-one" x="12" y="12" text-anchor="middle" dominant-baseline="central">1</text>
+                  </svg>
                 </button>
               </div>
             </section>
@@ -297,7 +302,14 @@
   <div id="youtube-player" class="visually-hidden-player" aria-hidden="true"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof window.__initYouTubePlayer === 'function') {
+        window.__initYouTubePlayer();
+      }
+    };
+  </script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script type="module" src="js/main.js?v=20260819-7"></script>
+  <script type="module" src="js/main.js?v=20260820-fix5"></script>
 </body>
 </html>

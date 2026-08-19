@@ -201,20 +201,27 @@ create policy "DJ만 재생상태 변경" on playback_state
 
 -- DJ 클라이언트 시계가 어긋나면 server_started_at 을 신뢰할 수 없다.
 -- 재생을 시작/재개할 때는 항상 DB 서버 시각으로 강제 고정한다.
+-- 단, 이미 재생 중인 상태에서 불필요한 UPDATE 로 인해 server_started_at 이 갱신되어
+-- 재생 중인 음악이 0초로 리셋되는 버그를 방지하기 위해 변경 조건이 충족될 때만 갱신한다.
 create or replace function public.stamp_server_started_at()
 returns trigger
 language plpgsql
 as $$
 begin
-  if new.is_playing then
+  if new.is_playing and (
+    old.is_playing is distinct from true or
+    old.current_track_id is distinct from new.current_track_id or
+    old.position_at_start is distinct from new.position_at_start
+  ) then
     new.server_started_at := now();
   end if;
   return new;
 end;
 $$;
 
+drop trigger if exists playback_state_stamp_server_started_at on public.playback_state;
 create trigger playback_state_stamp_server_started_at
-  before update on playback_state
+  before update on public.playback_state
   for each row
   execute function public.stamp_server_started_at();
 

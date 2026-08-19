@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient.js";
-import { unlockAudio } from "./player.js?v=20260820-crt";
+import { unlockAudio } from "./player.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
