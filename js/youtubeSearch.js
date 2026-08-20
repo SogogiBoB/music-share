@@ -1,5 +1,6 @@
 import { YOUTUBE_API_KEY } from "./config.js";
 import { parseYoutubeId, fetchYoutubeTitle } from "./playlist.js";
+import { normalizeTitle } from "./titleText.js";
 
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 
@@ -43,7 +44,8 @@ export function parseYoutubeSearchResults(apiJson) {
     .filter((item) => item.id?.videoId)
     .map((item) => ({
       videoId: item.id.videoId,
-      title: item.snippet?.title ?? "",
+      // 검색 API 는 제목을 HTML 이스케이프해서 준다. 여기서 풀어 두면 화면·저장 모두 사람이 읽는 제목이 된다.
+      title: normalizeTitle(item.snippet?.title),
     }));
 }
 

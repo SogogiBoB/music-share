@@ -1,16 +1,15 @@
 import { ensureIdentity, signOut } from "./auth.js";
 import { initPlaylistUI } from "./playlistUI.js";
 import {
-  takeOverDj, fetchSettings, isCurrentDj, delegateDj,
+  takeOverDj, fetchSettings, isCurrentDj,
   releaseDj, heartbeatDj, fetchProfiles, subscribeSettings, isDjLeaseExpired, shouldNotifyDjTakeover,
-  getRoomViewState, canDelegateTo,
+  getRoomViewState,
 } from "./roles.js";
 import { initPresence } from "./presence.js";
 import { fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js";
 import { searchUnified } from "./youtubeSearch.js";
 import {
-  fetchPlaylists, fetchPlaylistTracks, addTrackToPlaylist,
-  playlistOptionsChanged, getSaveToPlaylistState,
+  fetchPlaylists, addTrackToPlaylist, getSaveToPlaylistState,
 } from "./playlists.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
@@ -21,11 +20,42 @@ import {
 } from "./player.js";
 import { computeOutputVolume, clampVolume, loadMyVolume, saveMyVolume, setMasterVolume } from "./volume.js";
 
+// 목록에 담기 아이콘. 검색 결과 오른쪽의 "내 재생목록에 추가" 버튼에 쓴다.
+const ICON_LIST_ADD = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M4 7h12M4 12h9M4 17h7"/><path d="M17.5 13v7M14 16.5h7"/>
+</svg>`;
+
+// 곡 제목이 브라운관 폭보다 길면 재생 중에만 왼쪽으로 흘려서 뒷부분까지 보여준다.
+// 넘치는 폭(--marq-shift)과 이동 시간(--marq-dur)은 실제 렌더 크기로 계산한다.
+const MARQUEE_SPEED_PX_PER_SEC = 55;
+
+function updateTitleMarquee() {
+  const nowTitle = document.getElementById("now-title");
+  const inner = nowTitle?.querySelector(".marq");
+  if (!inner) return;
+
+  nowTitle.classList.remove("is-marquee");
+  const overflow = inner.scrollWidth - nowTitle.clientWidth;
+  if (overflow <= 4) return;
+
+  // 양끝에서 잠깐 멈추므로 왕복 시간에 여유(2.4초)를 더한다.
+  const travel = (overflow / MARQUEE_SPEED_PX_PER_SEC) * 2 + 2.4;
+  nowTitle.style.setProperty("--marq-shift", `${-overflow}px`);
+  nowTitle.style.setProperty("--marq-dur", `${travel.toFixed(1)}s`);
+  nowTitle.classList.add("is-marquee");
+}
+
 function renderNowPlaying(tracks, currentTrackId) {
   const track = tracks.find((t) => t.id === currentTrackId);
   const nowTitle = document.getElementById("now-title");
   const nowSub = document.getElementById("now-sub");
-  if (nowTitle) nowTitle.textContent = track ? track.title : "—";
+  if (nowTitle) {
+    const inner = document.createElement("span");
+    inner.className = "marq";
+    inner.textContent = track ? track.title : "—";
+    nowTitle.replaceChildren(inner);
+    requestAnimationFrame(updateTitleMarquee);
+  }
   if (nowSub) {
     nowSub.textContent = track
       ? "모두 같은 지점에서 듣는 중"
@@ -33,68 +63,27 @@ function renderNowPlaying(tracks, currentTrackId) {
   }
 }
 
-function renderPresence(users, myUid, djUid, profiles) {
+// 참여자는 닉네임만 보여준다(역할·DJ 램프·위임 버튼 없음).
+// 인원수는 상단 레일 배지와 팝업 헤더 둘 다에 쓴다.
+function renderPresence(users, profiles) {
   const list = document.getElementById("presence-list");
-  const count = document.getElementById("presence-count");
+  for (const id of ["presence-count", "presence-modal-count"]) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(users.length);
+  }
+  if (!list) return;
   list.innerHTML = "";
-  count.textContent = String(users.length);
   for (const u of users) {
-    const isDj = u.uid === djUid;
     const profile = profiles[u.uid];
     const nickname = String(profile?.nickname ?? u.nickname ?? "게스트");
 
     const li = document.createElement("li");
     li.className = "preset";
-    if (isDj) li.classList.add("is-dj");
-    if (profile?.is_guest) li.classList.add("is-guest");
 
-    const top = document.createElement("div");
-    top.className = "preset-top";
-
-    const cap = document.createElement("span");
-    cap.className = "cap";
-    cap.setAttribute("aria-hidden", "true");
-    cap.textContent = nickname.trim().charAt(0).toUpperCase() || "♪";
-
-    const copy = document.createElement("span");
     const name = document.createElement("span");
     name.className = "nm";
     name.textContent = nickname;
-    const role = document.createElement("span");
-    role.className = "rl";
-    role.textContent = (u.uid === myUid ? "나 · " : "") + (isDj ? "dj" : profile?.is_guest ? "게스트" : "리스너");
-    copy.append(name, role);
-
-    top.append(cap, copy);
-
-    if (isDj) {
-      const lamp = document.createElement("i");
-      lamp.className = "lamp";
-      lamp.setAttribute("aria-label", "DJ");
-      top.appendChild(lamp);
-    }
-
-    if (djUid === myUid && u.uid !== myUid && canDelegateTo(profile)) {
-      const btn = document.createElement("button");
-      btn.className = "assign";
-      btn.type = "button";
-      btn.textContent = "DJ 위임";
-      btn.addEventListener("click", async () => {
-        btn.disabled = true;
-        try {
-          await delegateDj(u.uid);
-          location.reload();
-        } catch (err) {
-          btn.disabled = false;
-          console.error(err);
-          alert("DJ 역할을 위임하지 못했습니다. 잠시 후 다시 시도해 주세요.");
-        }
-      });
-      top.appendChild(btn);
-    }
-
-    if (u.uid === myUid) li.classList.add("is-me");
-    li.append(top);
+    li.append(name);
 
     list.appendChild(li);
   }
@@ -220,7 +209,10 @@ function renderRoomAccess(settings, identity) {
   button.disabled = false;
   document.getElementById("playlist-section").classList.toggle("hidden", !view.showQueuePanel);
   document.getElementById("controls-section").classList.toggle("hidden", !view.showTransport);
-  document.getElementById("main-tab-playlists").classList.toggle("hidden", !view.showLibraryTab);
+  // 라이브러리는 이제 탭이 아니라 방 화면 오른쪽 컬럼이다. 게스트에게는 컬럼째 감추고
+  // 왼쪽(재생 + 대기열)이 화면 전체를 쓰게 한다.
+  document.getElementById("library-section").classList.toggle("hidden", !view.showLibraryTab);
+  document.getElementById("room-view").classList.toggle("is-solo", !view.showLibraryTab);
   document.getElementById("listener-note").classList.toggle("hidden", view.amDj);
 
   status.textContent = view.amDj ? "현재 DJ입니다"
@@ -240,6 +232,11 @@ function updatePlaybackToggle(isPlaying) {
     if (span) span.textContent = icon;
   }
   document.querySelector(".vu")?.classList.toggle("is-playing", Boolean(isPlaying));
+  const nowTitle = document.getElementById("now-title");
+  if (nowTitle) {
+    nowTitle.classList.toggle("is-playing", Boolean(isPlaying));
+    if (isPlaying) updateTitleMarquee();
+  }
 }
 
 function startDjHeartbeat() {
@@ -263,23 +260,19 @@ async function bootstrap() {
   const identity = await ensureIdentity();
   let settings = await fetchSettings();
   let amDj = isCurrentDj(settings, identity.uid);
-  document.getElementById("add-track-form").classList.toggle("hidden", !amDj);
   let currentView = renderRoomAccess(settings, identity);
   document.getElementById("app").classList.remove("hidden");
 
   let masterVolume = { value: settings.master_volume ?? 100, muted: false };
   let myVolume = loadMyVolume();
 
-  const ARC = 235.6;
-  function updateKnobUI(containerId, value, muted, locked) {
+  function updateVolumeUI(containerId, value, muted, locked) {
     const el = document.getElementById(containerId);
     if (!el) return;
     el.classList.toggle("is-muted", muted);
     if (locked !== undefined) el.classList.toggle("is-locked", locked);
-    const cap = el.querySelector(".vk-cap");
-    const arcFill = el.querySelector(".vk-arc-fill");
-    if (cap) cap.style.transform = `rotate(${-135 + 270 * value / 100}deg)`;
-    if (arcFill) arcFill.style.strokeDashoffset = String(ARC * (1 - (muted ? 0 : value) / 100));
+    // 슬라이더 트랙의 채워진 구간은 CSS 변수로 그린다.
+    el.style.setProperty("--v", `${muted ? 0 : value}%`);
   }
 
   function renderVolume(view) {
@@ -288,23 +281,16 @@ async function bootstrap() {
       masterMuted: masterVolume.muted, myMuted: myVolume.muted,
     });
     applyOutputVolume(out);
-    document.getElementById("master-volume-num").textContent = masterVolume.muted ? "음소거" : masterVolume.value;
-    document.getElementById("my-volume-num").textContent = myVolume.muted ? "음소거" : myVolume.value;
-    document.getElementById("output-volume-num").textContent = out;
-    document.getElementById("output-volume-bar").style.width = `${out}%`;
-    document.getElementById("output-volume-calc").textContent =
-      `MASTER ${masterVolume.muted ? "MUTE" : masterVolume.value} × MY ${myVolume.muted ? "MUTE" : myVolume.value}`;
 
     const masterInput = document.getElementById("master-volume-input");
     masterInput.value = masterVolume.value;
     masterInput.disabled = !view.amDj;
+    masterInput.title = view.amDj ? "마스터 볼륨 · 방 전체 기준" : "마스터 볼륨 · DJ만 조절";
     document.getElementById("master-volume-mute").disabled = !view.amDj;
-    document.getElementById("master-volume-tag").textContent =
-      view.amDj ? "DJ 전용 · 방 전체 기준" : "DJ만 조절 · 잠김";
     document.getElementById("my-volume-input").value = myVolume.value;
 
-    updateKnobUI("master-volume", masterVolume.value, masterVolume.muted, !view.amDj);
-    updateKnobUI("my-volume", myVolume.value, myVolume.muted, false);
+    updateVolumeUI("master-volume", masterVolume.value, masterVolume.muted, !view.amDj);
+    updateVolumeUI("my-volume", myVolume.value, myVolume.muted, false);
   }
 
   renderVolume(currentView);
@@ -359,21 +345,24 @@ async function bootstrap() {
     location.reload();
   });
 
-  let playlistUIStarted = false;
-  let playlistUIHandle = null;
-  function selectMainTab(which) {
-    const isRoom = which === "room";
-    document.getElementById("main-tab-room").setAttribute("aria-selected", String(isRoom));
-    document.getElementById("main-tab-playlists").setAttribute("aria-selected", String(!isRoom));
-    document.getElementById("room-view").classList.toggle("hidden", !isRoom);
-    document.getElementById("playlists-view").classList.toggle("hidden", isRoom);
-    if (!isRoom && !playlistUIStarted) {
-      playlistUIStarted = true;
-      playlistUIHandle = initPlaylistUI({ ownerUid: identity.uid, amDj });
-    }
+  // 재생목록 라이브러리는 탭이 아니라 방 화면 오른쪽에 상시 떠 있으므로 부팅 때 바로 켠다.
+  const playlistUIHandle = initPlaylistUI({ ownerUid: identity.uid, amDj });
+
+  // 참여자 목록: 상단 레일의 "N명 참여중" 을 누르면 팝업으로 연다.
+  const presenceModal = document.getElementById("presence-modal");
+  const presenceTrigger = document.getElementById("presence-open");
+  function setPresenceModalOpen(open) {
+    presenceModal.classList.toggle("hidden", !open);
+    if (!open) presenceTrigger.focus();
   }
-  document.getElementById("main-tab-room").addEventListener("click", () => selectMainTab("room"));
-  document.getElementById("main-tab-playlists").addEventListener("click", () => selectMainTab("playlists"));
+  presenceTrigger.addEventListener("click", () => setPresenceModalOpen(true));
+  document.getElementById("presence-close").addEventListener("click", () => setPresenceModalOpen(false));
+  presenceModal.addEventListener("click", (event) => {
+    if (event.target === presenceModal) setPresenceModalOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !presenceModal.classList.contains("hidden")) setPresenceModalOpen(false);
+  });
 
   let profiles = await loadProfiles();
 
@@ -389,7 +378,7 @@ async function bootstrap() {
       } catch (err) {
         console.error(err);
       }
-      renderPresence(users, identity.uid, settings.dj_uid, profiles);
+      renderPresence(users, profiles);
     },
   });
 
@@ -426,11 +415,11 @@ async function bootstrap() {
       }
       settings = { ...settings, dj_uid: identity.uid };
       amDj = true;
-      document.getElementById("add-track-form").classList.remove("hidden");
       currentView = renderRoomAccess(settings, identity);
       renderVolume(currentView);
       renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
-      renderLibraryPicker().catch(console.error);
+      // DJ가 되면 이미 떠 있는 검색 결과에도 ＋(대기열) 버튼이 생겨야 한다.
+      renderSearchResults(lastSearchResults);
       enableDjControls();
       startDjHeartbeat();
       await applyState();
@@ -448,6 +437,9 @@ async function bootstrap() {
   window.addEventListener("pagehide", () => {
     releaseDj().catch(() => {});
   });
+
+  // 창 폭이 바뀌면 제목이 넘치는지 다시 재어 흐름 여부를 정한다.
+  window.addEventListener("resize", updateTitleMarquee);
 
   if (amDj) startDjHeartbeat();
 
@@ -525,11 +517,8 @@ async function bootstrap() {
         title: saveTargetTrack.title,
       });
       closeSaveModal();
-      const status = document.getElementById("add-track-status");
-      status.className = "note ok";
-      status.textContent = "내 재생목록에 저장했어요.";
-      renderLibraryPicker().catch(console.error);
-      // 내 재생목록 탭이 이미 떠 있으면 저장분이 바로 보이도록 다시 읽는다.
+      setSearchStatus("내 재생목록에 저장했어요.", "ok");
+      // 오른쪽 라이브러리에 저장분이 바로 보이도록 다시 읽는다.
       playlistUIHandle?.refresh();
     } catch (err) {
       saveStatus.classList.add("err");
@@ -551,72 +540,99 @@ async function bootstrap() {
     onRequest: (track) => openSaveModal(track).catch(console.error),
   };
 
-  // 링크든 곡 제목이든 같은 입력창에서 검색하고, 결과 중 하나를 골라 대기열에 넣는다.
-  async function addSearchResultToQueue(result, resultButton) {
-    const status = document.getElementById("add-track-status");
-    const input = document.getElementById("youtube-url-input");
-    const resultsList = document.getElementById("queue-search-results");
-    status.className = "note";
-    resultButton.disabled = true;
+  // 링크든 곡 제목이든 한 입력창에서 찾고, 결과 한 줄에서 바로 대기열(＋)이나
+  // 내 재생목록(목록 아이콘 → 선택 모달)으로 보낸다.
+  const searchInput = document.getElementById("track-search-input");
+  const searchButton = document.getElementById("track-search-button");
+  const searchResults = document.getElementById("track-search-results");
+  const searchStatus = document.getElementById("track-search-status");
+  let lastSearchResults = [];
+
+  function setSearchStatus(text, kind = "") {
+    searchStatus.className = kind ? `note ${kind}` : "note";
+    searchStatus.textContent = text;
+  }
+
+  async function addResultToQueue(result, button) {
+    button.disabled = true;
+    setSearchStatus("대기열에 넣는 중…");
     try {
-      await addTrackFromLibrary({
-        youtubeId: result.videoId,
-        title: result.title,
-        uid: identity.uid,
-      });
-      input.value = "";
-      resultsList.innerHTML = "";
-      status.classList.add("ok");
-      status.textContent = `"${result.title}" 대기열에 추가했어요.`;
+      await addTrackFromLibrary({ youtubeId: result.videoId, title: result.title, uid: identity.uid });
+      setSearchStatus(`"${result.title}" 대기열에 추가했어요.`, "ok");
     } catch (err) {
       console.error(err);
-      resultButton.disabled = false;
-      status.classList.add("err");
-      status.textContent = err.message ?? "곡을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      setSearchStatus(err.message ?? "대기열에 넣지 못했어요.", "err");
+    } finally {
+      button.disabled = false;
     }
   }
 
-  document.getElementById("add-track-button").addEventListener("click", async () => {
-    const input = document.getElementById("youtube-url-input");
-    const button = document.getElementById("add-track-button");
-    const status = document.getElementById("add-track-status");
-    const resultsList = document.getElementById("queue-search-results");
-    resultsList.innerHTML = "";
-    status.className = "note";
-    if (!input.value.trim()) {
-      status.classList.add("err");
-      status.textContent = "유튜브 링크나 곡 제목을 입력해 주세요.";
-      input.focus();
+  function renderSearchResults(results) {
+    lastSearchResults = results;
+    searchResults.innerHTML = "";
+    for (const r of results) {
+      const li = document.createElement("li");
+      li.className = "find";
+
+      // 대기열에 넣는 건 DJ만 할 수 있으므로 DJ가 아닐 때는 ＋ 자체를 만들지 않는다.
+      if (amDj) {
+        const toQueue = document.createElement("button");
+        toQueue.type = "button";
+        toQueue.className = "find-btn";
+        toQueue.title = "대기열에 추가";
+        toQueue.setAttribute("aria-label", `${r.title} 대기열에 추가`);
+        toQueue.textContent = "＋";
+        toQueue.addEventListener("click", () => addResultToQueue(r, toQueue));
+        li.appendChild(toQueue);
+      }
+
+      const title = document.createElement("span");
+      title.className = "tt";
+      title.textContent = r.title;
+      li.appendChild(title);
+
+      if (!identity.isGuest) {
+        const toPlaylist = document.createElement("button");
+        toPlaylist.type = "button";
+        toPlaylist.className = "find-btn";
+        toPlaylist.title = "내 재생목록에 추가";
+        toPlaylist.setAttribute("aria-label", `${r.title} 내 재생목록에 추가`);
+        toPlaylist.innerHTML = ICON_LIST_ADD;
+        toPlaylist.addEventListener("click", () => {
+          openSaveModal({ title: r.title, youtubeId: r.videoId }).catch(console.error);
+        });
+        li.appendChild(toPlaylist);
+      }
+
+      searchResults.appendChild(li);
+    }
+  }
+
+  searchButton.addEventListener("click", async () => {
+    searchResults.innerHTML = "";
+    if (!searchInput.value.trim()) {
+      setSearchStatus("유튜브 링크나 곡 제목을 입력해 주세요.", "err");
+      searchInput.focus();
       return;
     }
-    button.disabled = true;
-    button.textContent = "찾는 중…";
-    status.textContent = "곡을 찾고 있어요.";
+    searchButton.disabled = true;
+    searchButton.textContent = "찾는 중…";
+    setSearchStatus("곡을 찾고 있어요.");
     try {
-      const results = await searchUnified({ input: input.value });
-      status.textContent = results.length ? "추가할 곡을 골라 주세요." : "검색 결과가 없어요.";
-      for (const r of results) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "youtube-search-result-button";
-        btn.textContent = r.title;
-        btn.addEventListener("click", () => addSearchResultToQueue(r, btn));
-        li.appendChild(btn);
-        resultsList.appendChild(li);
-      }
+      const results = await searchUnified({ input: searchInput.value });
+      setSearchStatus(results.length ? "" : "검색 결과가 없어요.");
+      renderSearchResults(results);
     } catch (err) {
       console.error(err);
-      status.classList.add("err");
-      status.textContent = err.message ?? "곡을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      setSearchStatus(err.message ?? "곡을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.", "err");
     } finally {
-      button.disabled = false;
-      button.textContent = "검색";
+      searchButton.disabled = false;
+      searchButton.textContent = "검색";
     }
   });
 
-  document.getElementById("youtube-url-input").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") document.getElementById("add-track-button").click();
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") searchButton.click();
   });
 
   let currentTracks = await fetchTracks();
@@ -658,92 +674,12 @@ async function bootstrap() {
     }
   });
 
-  async function renderLibraryPicker() {
-    if (identity.isGuest) return;
-    const select = document.getElementById("library-picker-select");
-    const list = document.getElementById("library-picker-list");
-    const note = document.getElementById("library-picker-note");
-    const allButton = document.getElementById("library-picker-all");
-    if (!select || !list || !note || !allButton) return;
-
-    const playlists = await fetchPlaylists(identity.uid);
-    // 개수만 비교하면 다른 탭에서 만들거나 이름을 바꾼 재생목록이 반영되지 않는다.
-    const currentOptions = [...select.options].map((o) => ({ value: o.value, label: o.textContent }));
-    if (playlistOptionsChanged(currentOptions, playlists)) {
-      const previous = select.value;
-      select.innerHTML = "";
-      playlists.forEach((p) => {
-        const opt = document.createElement("option");
-        opt.value = String(p.id);
-        opt.textContent = p.name;
-        select.appendChild(opt);
-      });
-      if (playlists.some((p) => String(p.id) === previous)) select.value = previous;
-    }
-    if (!playlists.length) {
-      note.textContent = "내 재생목록이 아직 없어요.";
-      list.innerHTML = "";
-      allButton.disabled = true;
-      return;
-    }
-
-    const libraryTracks = await fetchPlaylistTracks(Number(select.value || playlists[0].id));
-
-    list.innerHTML = "";
-    libraryTracks.forEach((t, index) => {
-      const li = document.createElement("li");
-      const no = document.createElement("span");
-      no.className = "no";
-      no.textContent = String(index + 1).padStart(2, "0");
-      const title = document.createElement("span");
-      title.className = "tt";
-      title.textContent = t.title;
-      const button = document.createElement("button");
-      button.className = "key pick-add";
-      button.type = "button";
-      button.textContent = "＋ 대기열";
-      button.addEventListener("click", async () => {
-        button.disabled = true;
-        try {
-          await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: identity.uid });
-        } catch (err) {
-          note.textContent = err.message;
-          button.disabled = false;
-          return;
-        }
-        currentTracks = await fetchTracks();
-        await renderLibraryPicker();
-      });
-      li.append(no, title, button);
-      list.appendChild(li);
-    });
-
-    const selectedOption = select.selectedOptions[0];
-    const playlistTitle = selectedOption ? selectedOption.textContent : "";
-    note.textContent = `${playlistTitle} · 곡 ${libraryTracks.length}개`;
-    allButton.disabled = libraryTracks.length === 0;
-  }
-
-  document.getElementById("library-picker-select")?.addEventListener("change", renderLibraryPicker);
-  document.getElementById("library-picker-all")?.addEventListener("click", async () => {
-    const select = document.getElementById("library-picker-select");
-    if (!select?.value) return;
-    const list = await fetchPlaylistTracks(Number(select.value));
-    for (const t of list) {
-      await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: identity.uid });
-    }
-    currentTracks = await fetchTracks();
-    await renderLibraryPicker();
-  });
-
   renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
   renderNowPlaying(currentTracks, currentTrackId);
-  renderLibraryPicker().catch(console.error);
   subscribeTracks((tracks) => {
     currentTracks = tracks;
     renderTracks(tracks, amDj, currentTrackId, saveToPlaylist);
     renderNowPlaying(tracks, currentTrackId);
-    renderLibraryPicker().catch(console.error);
   });
 
   const applyState = async (state) => {

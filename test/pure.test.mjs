@@ -500,8 +500,8 @@ test("computeSeekTarget: duration 을 아직 모르면 expected 를 그대로 �
 const { deriveNickname } = auth;
 
 test("deriveNickname: 저장된 닉네임이 있으면 그대로 쓴다", () => {
-  assert.equal(deriveNickname({ storedNickname: "설탕", email: "a@b.com", isAnonymous: false }), "설탕");
-  assert.equal(deriveNickname({ storedNickname: "  설탕  ", email: "a@b.com" }), "설탕");
+  assert.equal(deriveNickname({ storedNickname: "설탕", isAnonymous: false }), "설탕");
+  assert.equal(deriveNickname({ storedNickname: "  설탕  " }), "설탕");
 });
 
 test("deriveNickname: 익명(게스트) 세션은 게스트로 표시한다", () => {
@@ -510,13 +510,13 @@ test("deriveNickname: 익명(게스트) 세션은 게스트로 표시한다", ()
   assert.equal(deriveNickname({ storedNickname: "밤손님", isAnonymous: true }), "밤손님");
 });
 
-test("deriveNickname: 정회원인데 닉네임이 게스트 자리표시자면 이메일 아이디로 되살린다", () => {
-  assert.equal(deriveNickname({ storedNickname: "게스트", email: "sugar@dj.kr", isAnonymous: false }), "sugar");
+test("deriveNickname: 정회원인데 닉네임이 게스트 자리표시자면 리스너로 되돌린다", () => {
+  assert.equal(deriveNickname({ storedNickname: "게스트", isAnonymous: false }), "리스너");
 });
 
-test("deriveNickname: 저장된 닉네임이 없으면 이메일 아이디, 그것도 없으면 리스너", () => {
-  assert.equal(deriveNickname({ email: "sugar@dj.kr", isAnonymous: false }), "sugar");
-  assert.equal(deriveNickname({ email: "", isAnonymous: false }), "리스너");
+test("deriveNickname: 이메일은 절대 닉네임으로 쓰지 않는다", () => {
+  assert.equal(deriveNickname({ email: "sugar@dj.kr", isAnonymous: false }), "리스너");
+  assert.equal(deriveNickname({ email: "sugar@dj.kr", isAnonymous: true }), "게스트");
   assert.equal(deriveNickname({}), "리스너");
 });
 
@@ -621,4 +621,64 @@ test("getSaveToPlaylistState: 재생목록이 없으면 버튼은 보이되 저�
 test("getSaveToPlaylistState: 재생목록이 있으면 저장 가능", () => {
   assert.deepEqual(getSaveToPlaylistState({ isGuest: false, playlists: [{ id: 1, name: "밤" }] }),
     { showButton: true, canSave: true, message: "" });
+});
+
+// ── 곡 제목 HTML 엔티티 디코딩 ────────────────────────────────
+// 유튜브 검색 API 는 snippet.title 을 HTML 이스케이프해서 준다. 화면은 textContent 로
+// 그리므로 엔티티가 문자 그대로 보인다. 데이터 경계에서 풀어 준다.
+import { decodeHtmlEntities, normalizeTitle, normalizeTrackTitles } from "../js/titleText.js";
+
+test("decodeHtmlEntities: 이름 있는 엔티티를 푼다", () => {
+  assert.equal(decodeHtmlEntities("Tom &amp; Jerry"), "Tom & Jerry");
+  assert.equal(decodeHtmlEntities("Don&#39;t Stop"), "Don't Stop");
+  assert.equal(decodeHtmlEntities("&quot;Hello&quot;"), '"Hello"');
+  assert.equal(decodeHtmlEntities("a &lt;b&gt; c"), "a <b> c");
+  assert.equal(decodeHtmlEntities("Don&apos;t"), "Don't");
+});
+
+test("decodeHtmlEntities: 10진·16진 숫자 참조를 푼다", () => {
+  assert.equal(decodeHtmlEntities("&#48124;"), "민");
+  assert.equal(decodeHtmlEntities("&#x1F3B5;"), "\u{1F3B5}");
+  assert.equal(decodeHtmlEntities("&#X41;"), "A");
+});
+
+test("decodeHtmlEntities: 이중 이스케이프도 끝까지 푼다", () => {
+  assert.equal(decodeHtmlEntities("Don&amp;#39;t Stop"), "Don't Stop");
+});
+
+test("decodeHtmlEntities: 모르는 엔티티와 맨 & 는 그대로 둔다", () => {
+  assert.equal(decodeHtmlEntities("R&B &foo; 100&"), "R&B &foo; 100&");
+});
+
+test("decodeHtmlEntities: 빈 값은 빈 문자열", () => {
+  assert.equal(decodeHtmlEntities(null), "");
+  assert.equal(decodeHtmlEntities(undefined), "");
+});
+
+test("normalizeTitle: 디코딩 후 양끝 공백을 정리한다", () => {
+  assert.equal(normalizeTitle("  IU &amp; Suga  "), "IU & Suga");
+  assert.equal(normalizeTitle("&nbsp;IU&nbsp;"), "IU");
+});
+
+test("normalizeTrackTitles: 목록의 모든 곡 제목을 푼다", () => {
+  assert.deepEqual(
+    normalizeTrackTitles([
+      { id: 1, youtube_id: "a", title: "Tom &amp; Jerry" },
+      { id: 2, youtube_id: "b", title: "Don&#39;t Stop" },
+    ]),
+    [
+      { id: 1, youtube_id: "a", title: "Tom & Jerry" },
+      { id: 2, youtube_id: "b", title: "Don't Stop" },
+    ]
+  );
+  assert.deepEqual(normalizeTrackTitles(null), null);
+});
+
+test("parseYoutubeSearchResults: 검색 결과 제목의 엔티티를 풀어서 준다", () => {
+  const apiJson = {
+    items: [{ id: { videoId: "abc123" }, snippet: { title: "Tom &amp; Jerry &#39;OST&#39;" } }],
+  };
+  assert.deepEqual(parseYoutubeSearchResults(apiJson), [
+    { videoId: "abc123", title: "Tom & Jerry 'OST'" },
+  ]);
 });

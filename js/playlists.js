@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { normalizeTitle, normalizeTrackTitles } from "./titleText.js";
 
 export function hasDuplicateTrack(tracks, youtubeId) {
   return tracks.some((t) => t.youtube_id === youtubeId);
@@ -74,7 +75,8 @@ export async function fetchPlaylistTracks(playlistId) {
     .eq("playlist_id", playlistId)
     .order("position");
   if (error) throw error;
-  return data;
+  // 이스케이프된 채로 저장된 기존 행도 화면에서는 제대로 보이게 한다.
+  return normalizeTrackTitles(data);
 }
 
 export async function fetchAllPlaylistsWithTracks(ownerUid) {
@@ -93,7 +95,7 @@ export async function addTrackToPlaylist({ playlistId, youtubeId, title }) {
   const { error } = await supabase.from("playlist_tracks").insert({
     playlist_id: playlistId,
     youtube_id: youtubeId,
-    title,
+    title: normalizeTitle(title),
     position: existing.length,
   });
   if (error) throw error;

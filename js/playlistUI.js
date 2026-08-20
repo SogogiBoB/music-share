@@ -1,15 +1,22 @@
 import { addTrackFromLibrary } from "./playlist.js";
-import { searchUnified } from "./youtubeSearch.js";
 import {
   fetchAllPlaylistsWithTracks, createPlaylist, renamePlaylist, deletePlaylist,
-  addTrackToPlaylist, removeTrackFromPlaylist, moveTrackToPlaylist,
-  computeReorderedPositions, persistReorder, filterPlaylistsByQuery,
+  removeTrackFromPlaylist, moveTrackToPlaylist,
+  computeReorderedPositions, persistReorder,
 } from "./playlists.js";
+
+// 재생목록 한 줄 오른쪽에 붙는 아이콘 버튼(이름 변경 · 삭제).
+const ICON_EDIT = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M4 20.5h4.2L19 9.7l-4.2-4.2L4 16.3z"/><path d="M13.7 6.6l4.2 4.2"/>
+</svg>`;
+const ICON_TRASH = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M4 6.5h16"/><path d="M9.5 6.5V3.8h5v2.7"/><path d="M6.3 6.5l1 13.7h9.4l1-13.7"/>
+  <path d="M10.2 10.4v6.2M13.8 10.4v6.2"/>
+</svg>`;
 
 export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
   let playlists = [];
   let selectedPlaylistId = null;
-  let searchQuery = "";
 
   const statusEl = document.getElementById("playlist-manager-status");
 
@@ -18,22 +25,24 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
     statusEl.classList.toggle("is-error", isError);
   }
 
-  function visiblePlaylists() {
-    return filterPlaylistsByQuery(playlists, searchQuery);
-  }
-
   function renderPlaylistList() {
     const list = document.getElementById("playlist-list");
     list.innerHTML = "";
-    const visible = visiblePlaylists();
-    visible.forEach((p, index) => {
+    playlists.forEach((p, index) => {
+      const isOpen = p.id === selectedPlaylistId;
+
       const li = document.createElement("li");
       li.className = "bank-item";
+      if (isOpen) li.classList.add("is-open");
+
+      const row = document.createElement("div");
+      row.className = "bank-row";
 
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "bank";
-      if (p.id === selectedPlaylistId) btn.classList.add("is-on");
+      btn.setAttribute("aria-expanded", String(isOpen));
+      if (isOpen) btn.classList.add("is-on");
 
       const bk = document.createElement("span");
       bk.className = "bk";
@@ -49,19 +58,21 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
 
       btn.append(bk, bn, bc);
 
+      // 같은 목록을 다시 누르면 접는다.
       btn.addEventListener("click", () => {
-        selectedPlaylistId = p.id;
+        selectedPlaylistId = isOpen ? null : p.id;
         renderPlaylistList();
-        renderDetail();
       });
-      li.appendChild(btn);
+      row.appendChild(btn);
 
       const acts = document.createElement("div");
       acts.className = "bank-acts";
 
       const rename = document.createElement("button");
       rename.type = "button";
-      rename.textContent = "이름변경";
+      rename.title = "이름 변경";
+      rename.setAttribute("aria-label", `${p.name} 이름 변경`);
+      rename.innerHTML = ICON_EDIT;
       rename.addEventListener("click", async () => {
         const nextName = prompt("새 이름을 입력해 주세요.", p.name);
         if (!nextName || !nextName.trim()) return;
@@ -77,7 +88,9 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
 
       const del = document.createElement("button");
       del.type = "button";
-      del.textContent = "삭제";
+      del.title = "삭제";
+      del.setAttribute("aria-label", `${p.name} 삭제`);
+      del.innerHTML = ICON_TRASH;
       del.addEventListener("click", async () => {
         if (!confirm(`"${p.name}" 재생목록을 삭제할까요?`)) return;
         try {
@@ -91,13 +104,14 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
       });
       acts.appendChild(del);
 
-      li.appendChild(acts);
+      row.appendChild(acts);
+      li.appendChild(row);
+
+      // 아코디언: 펼친 목록만 곡 목록을 바로 아래에 그린다.
+      if (isOpen) li.appendChild(renderTrackPanel(p));
+
       list.appendChild(li);
     });
-  }
-
-  function currentPlaylist() {
-    return playlists.find((p) => p.id === selectedPlaylistId) ?? null;
   }
 
   function renderMoveDropdown(track) {
@@ -128,19 +142,21 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
     return select;
   }
 
-  function renderDetail() {
-    const empty = document.getElementById("playlist-detail-empty");
-    const content = document.getElementById("playlist-detail-content");
-    const playlist = currentPlaylist();
+  function renderTrackPanel(playlist) {
+    const panel = document.createElement("div");
+    panel.className = "bank-panel";
 
-    empty.classList.toggle("hidden", Boolean(playlist));
-    content.classList.toggle("hidden", !playlist);
-    if (!playlist) return;
+    const list = document.createElement("ul");
+    list.className = "panel-tracks";
+    list.setAttribute("aria-label", `${playlist.name} 곡 목록`);
 
-    document.getElementById("playlist-detail-name").textContent = playlist.name;
+    if (playlist.tracks.length === 0) {
+      const emptyNote = document.createElement("p");
+      emptyNote.className = "field-message";
+      emptyNote.textContent = "아직 곡이 없어요. 위에서 곡을 찾아 담아 보세요.";
+      panel.appendChild(emptyNote);
+    }
 
-    const list = document.getElementById("playlist-track-list");
-    list.innerHTML = "";
     playlist.tracks.forEach((t, index) => {
       const li = document.createElement("li");
       li.className = "strip";
@@ -158,7 +174,7 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
         if (fromIndex === toIndex) return;
         const reordered = computeReorderedPositions(playlist.tracks, fromIndex, toIndex);
         playlist.tracks = reordered;
-        renderDetail();
+        renderPlaylistList();
         try {
           await persistReorder(reordered);
         } catch (err) {
@@ -217,103 +233,79 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
       list.appendChild(li);
     });
 
-    let djHint = document.getElementById("playlist-dj-hint");
-    if (!djHint) {
-      djHint = document.createElement("p");
-      djHint.id = "playlist-dj-hint";
+    panel.appendChild(list);
+
+    if (!amDj && playlist.tracks.length > 0) {
+      const djHint = document.createElement("p");
       djHint.className = "dj-hint field-message";
-      list.after(djHint);
+      djHint.textContent = "DJ가 되면 이 목록의 곡을 바로 대기열에 넣을 수 있어요.";
+      panel.appendChild(djHint);
     }
-    djHint.textContent = "DJ가 되면 이 목록의 곡을 바로 대기열에 넣을 수 있어요.";
-    djHint.classList.toggle("hidden", Boolean(amDj));
+
+    return panel;
   }
 
   async function reload() {
     playlists = await fetchAllPlaylistsWithTracks(ownerUid);
     renderPlaylistList();
-    renderDetail();
   }
 
-  document.getElementById("new-playlist-button").addEventListener("click", async () => {
-    const input = document.getElementById("new-playlist-name-input");
-    const name = input.value.trim();
+  // 새 재생 목록: 목록 아래 고정 버튼 → 모달에서 이름을 받는다.
+  const newModal = document.getElementById("new-playlist-modal");
+  const newInput = document.getElementById("new-playlist-name-input");
+  const newStatusEl = document.getElementById("new-playlist-status");
+  const newSubmit = document.getElementById("new-playlist-submit");
+
+  function openNewPlaylistModal() {
+    newInput.value = "";
+    newStatusEl.textContent = "";
+    newStatusEl.classList.remove("is-error");
+    newModal.classList.remove("hidden");
+    newInput.focus();
+  }
+
+  function closeNewPlaylistModal() {
+    newModal.classList.add("hidden");
+    document.getElementById("new-playlist-button").focus();
+  }
+
+  async function submitNewPlaylist() {
+    const name = newInput.value.trim();
     if (!name) {
-      setStatus("재생목록 이름을 입력해 주세요.", true);
+      newStatusEl.textContent = "재생 목록 이름을 입력해 주세요.";
+      newStatusEl.classList.add("is-error");
+      newInput.focus();
       return;
     }
+    newSubmit.disabled = true;
     try {
       await createPlaylist({ name, ownerUid });
-      input.value = "";
+      closeNewPlaylistModal();
       setStatus("");
       await reload();
     } catch (err) {
       console.error(err);
-      setStatus("재생목록을 만들지 못했어요.", true);
-    }
-  });
-
-  document.getElementById("playlist-search-button").addEventListener("click", () => {
-    searchQuery = document.getElementById("playlist-search-input").value;
-    renderPlaylistList();
-  });
-  document.getElementById("playlist-search-input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") document.getElementById("playlist-search-button").click();
-  });
-
-  const trackStatus = document.getElementById("playlist-track-status");
-
-  // 링크든 곡 제목이든 같은 입력창에서 검색하고, 결과 중 하나를 골라 추가한다.
-  const searchInput = document.getElementById("playlist-track-search-input");
-  const searchButton = document.getElementById("playlist-track-search-button");
-  const resultsList = document.getElementById("playlist-track-search-results");
-
-  searchButton.addEventListener("click", async () => {
-    const input = searchInput.value;
-    resultsList.innerHTML = "";
-    if (!input.trim()) return;
-    trackStatus.classList.remove("is-error");
-    trackStatus.textContent = "찾는 중…";
-    searchButton.disabled = true;
-    try {
-      const results = await searchUnified({ input });
-      trackStatus.textContent = results.length ? "추가할 곡을 골라 주세요." : "검색 결과가 없어요.";
-      for (const r of results) {
-        const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "youtube-search-result-button";
-        btn.textContent = r.title;
-        btn.addEventListener("click", async () => {
-          const playlist = currentPlaylist();
-          if (!playlist) return;
-          btn.disabled = true;
-          try {
-            await addTrackToPlaylist({ playlistId: playlist.id, youtubeId: r.videoId, title: r.title });
-            trackStatus.classList.remove("is-error");
-            trackStatus.textContent = `"${r.title}" 추가했어요.`;
-            searchInput.value = "";
-            resultsList.innerHTML = "";
-            await reload();
-          } catch (err) {
-            btn.disabled = false;
-            trackStatus.classList.add("is-error");
-            trackStatus.textContent = err.message ?? "추가하지 못했어요.";
-          }
-        });
-        li.appendChild(btn);
-        resultsList.appendChild(li);
-      }
-    } catch (err) {
-      console.error(err);
-      trackStatus.classList.add("is-error");
-      trackStatus.textContent = err.message ?? "검색에 실패했어요.";
+      newStatusEl.textContent = "재생 목록을 만들지 못했어요.";
+      newStatusEl.classList.add("is-error");
     } finally {
-      searchButton.disabled = false;
+      newSubmit.disabled = false;
     }
+  }
+
+  document.getElementById("new-playlist-button").addEventListener("click", openNewPlaylistModal);
+  document.getElementById("new-playlist-cancel").addEventListener("click", closeNewPlaylistModal);
+  newSubmit.addEventListener("click", submitNewPlaylist);
+  newInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitNewPlaylist();
   });
-  searchInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") searchButton.click();
+  newModal.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeNewPlaylistModal();
   });
+  newModal.addEventListener("click", (e) => {
+    if (e.target === newModal) closeNewPlaylistModal();
+  });
+
+  // 곡 검색·추가는 라이브러리 상단의 통합 검색(js/main.js)이 담당한다.
 
   function refresh() {
     return reload().catch((err) => {

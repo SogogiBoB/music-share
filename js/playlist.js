@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient.js";
+import { normalizeTitle, normalizeTrackTitles } from "./titleText.js";
 
 export function parseYoutubeId(url) {
   try {
@@ -26,13 +27,14 @@ export async function fetchYoutubeTitle(videoId) {
   );
   if (!res.ok) throw new Error("oEmbed 조회 실패");
   const data = await res.json();
-  return data.title;
+  return normalizeTitle(data.title);
 }
 
 export async function fetchTracks() {
   const { data, error } = await supabase.from("tracks").select().order("position").order("id");
   if (error) throw error;
-  return data;
+  // 이스케이프된 채로 저장된 기존 행도 화면에서는 제대로 보이게 한다.
+  return normalizeTrackTitles(data);
 }
 
 export async function addTrack({ url, uid }) {
@@ -61,7 +63,7 @@ export async function addTrackFromLibrary({ youtubeId, title, uid }) {
   const existing = await fetchTracks();
   const { error } = await supabase.from("tracks").insert({
     youtube_id: youtubeId,
-    title,
+    title: normalizeTitle(title),
     added_by: uid,
     position: existing.length,
   });

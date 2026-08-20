@@ -30,15 +30,15 @@ export function setNicknameModalVisibility(modal, visible) {
 }
 
 const GUEST_PLACEHOLDER = "게스트";
+const MEMBER_PLACEHOLDER = "리스너";
 
 // 표시용 닉네임을 정한다. 저장된 닉네임이 최우선이고, 정회원인데 값이 "게스트"
-// 자리표시자로 남아 있으면(예전 로직이 덮어쓴 흔적) 이메일 아이디로 되살린다.
-export function deriveNickname({ storedNickname, email, isAnonymous } = {}) {
+// 자리표시자로 남아 있으면(예전 로직이 덮어쓴 흔적) "리스너" 로 되돌린다.
+// 이메일은 다른 참여자에게 노출되므로 닉네임 후보로 쓰지 않는다.
+export function deriveNickname({ storedNickname, isAnonymous } = {}) {
   const stored = String(storedNickname ?? "").trim();
   if (stored && !(stored === GUEST_PLACEHOLDER && !isAnonymous)) return stored;
-  if (isAnonymous) return GUEST_PLACEHOLDER;
-  const local = String(email ?? "").split("@")[0].trim();
-  return local || "리스너";
+  return isAnonymous ? GUEST_PLACEHOLDER : MEMBER_PLACEHOLDER;
 }
 
 export async function ensureIdentity() {
@@ -51,7 +51,6 @@ export async function ensureIdentity() {
 
     const nickname = deriveNickname({
       storedNickname: profile?.nickname,
-      email: session.user.email,
       isAnonymous,
     });
     const isGuest = profile?.is_guest ?? isAnonymous;
@@ -131,7 +130,6 @@ function promptAuth() {
         const { data: profile } = await supabase.from("profiles").select().eq("uid", data.user.id).single();
         const nickname = deriveNickname({
           storedNickname: profile?.nickname,
-          email: data.user.email,
           isAnonymous: false,
         });
         // 프로필 행이 없는 계정(구버전 가입자)도 게스트로 굳지 않게 여기서 만들어 둔다.
