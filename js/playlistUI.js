@@ -1,5 +1,5 @@
-import { parseYoutubeId, fetchYoutubeTitle, addTrackFromLibrary } from "./playlist.js";
-import { searchYoutube } from "./youtubeSearch.js";
+import { addTrackFromLibrary } from "./playlist.js";
+import { searchUnified } from "./youtubeSearch.js";
 import {
   fetchAllPlaylistsWithTracks, createPlaylist, renamePlaylist, deletePlaylist,
   addTrackToPlaylist, removeTrackFromPlaylist, moveTrackToPlaylist,
@@ -200,9 +200,13 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
           toQueue.disabled = true;
           try {
             await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: uid ?? ownerUid });
-            toQueue.textContent = "대기열에 있음";
+            toQueue.textContent = "대기열에 넣었어요";
           } catch (err) {
-            toQueue.textContent = "대기열에 있음";
+            console.error(err);
+            setStatus(err.message ?? "대기열에 넣지 못했어요.", true);
+          } finally {
+            toQueue.disabled = false;
+            setTimeout(() => { toQueue.textContent = "＋ 대기열"; }, 1500);
           }
         });
         elements.push(toQueue);
@@ -258,41 +262,21 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
 
   const trackStatus = document.getElementById("playlist-track-status");
 
-  document.getElementById("playlist-track-url-button").addEventListener("click", async () => {
-    const playlist = currentPlaylist();
-    if (!playlist) return;
-    const input = document.getElementById("playlist-track-url-input");
-    const url = input.value.trim();
-    const videoId = parseYoutubeId(url);
-    if (!videoId) {
-      trackStatus.textContent = "올바른 유튜브 링크를 입력해 주세요.";
-      trackStatus.classList.add("is-error");
-      return;
-    }
-    trackStatus.classList.remove("is-error");
-    trackStatus.textContent = "곡 정보를 확인하고 있어요.";
-    try {
-      const title = await fetchYoutubeTitle(videoId);
-      await addTrackToPlaylist({ playlistId: playlist.id, youtubeId: videoId, title });
-      input.value = "";
-      trackStatus.textContent = "추가했어요.";
-      await reload();
-    } catch (err) {
-      trackStatus.classList.add("is-error");
-      trackStatus.textContent = err.message ?? "추가하지 못했어요.";
-    }
-  });
+  // 링크든 곡 제목이든 같은 입력창에서 검색하고, 결과 중 하나를 골라 추가한다.
+  const searchInput = document.getElementById("playlist-track-search-input");
+  const searchButton = document.getElementById("playlist-track-search-button");
+  const resultsList = document.getElementById("playlist-track-search-results");
 
-  document.getElementById("playlist-track-search-button").addEventListener("click", async () => {
-    const query = document.getElementById("playlist-track-search-input").value.trim();
-    const resultsList = document.getElementById("playlist-track-search-results");
+  searchButton.addEventListener("click", async () => {
+    const input = searchInput.value;
     resultsList.innerHTML = "";
-    if (!query) return;
+    if (!input.trim()) return;
     trackStatus.classList.remove("is-error");
-    trackStatus.textContent = "검색하는 중…";
+    trackStatus.textContent = "찾는 중…";
+    searchButton.disabled = true;
     try {
-      const results = await searchYoutube(query);
-      trackStatus.textContent = results.length ? "" : "검색 결과가 없어요.";
+      const results = await searchUnified({ input });
+      trackStatus.textContent = results.length ? "추가할 곡을 골라 주세요." : "검색 결과가 없어요.";
       for (const r of results) {
         const li = document.createElement("li");
         const btn = document.createElement("button");
@@ -302,12 +286,16 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
         btn.addEventListener("click", async () => {
           const playlist = currentPlaylist();
           if (!playlist) return;
+          btn.disabled = true;
           try {
             await addTrackToPlaylist({ playlistId: playlist.id, youtubeId: r.videoId, title: r.title });
             trackStatus.classList.remove("is-error");
-            trackStatus.textContent = "추가했어요.";
+            trackStatus.textContent = `"${r.title}" 추가했어요.`;
+            searchInput.value = "";
+            resultsList.innerHTML = "";
             await reload();
           } catch (err) {
+            btn.disabled = false;
             trackStatus.classList.add("is-error");
             trackStatus.textContent = err.message ?? "추가하지 못했어요.";
           }
@@ -318,12 +306,24 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
     } catch (err) {
       console.error(err);
       trackStatus.classList.add("is-error");
-      trackStatus.textContent = "유튜브 검색에 실패했어요.";
+      trackStatus.textContent = err.message ?? "검색에 실패했어요.";
+    } finally {
+      searchButton.disabled = false;
     }
   });
-
-  reload().catch((err) => {
-    console.error(err);
-    setStatus("재생목록을 불러오지 못했어요.", true);
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") searchButton.click();
   });
+
+  function refresh() {
+    return reload().catch((err) => {
+      console.error(err);
+      setStatus("재생목록을 불러오지 못했어요.", true);
+    });
+  }
+
+  refresh();
+
+  // 대기열 화면에서 곡을 저장했을 때처럼, 바깥에서 목록을 다시 읽어야 할 때 쓴다.
+  return { refresh };
 }

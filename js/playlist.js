@@ -2,12 +2,17 @@ import { supabase } from "./supabaseClient.js";
 
 export function parseYoutubeId(url) {
   try {
-    const u = new URL(url);
+    const u = new URL(String(url).trim());
     if (u.hostname === "youtu.be") {
-      return u.pathname.slice(1) || null;
+      return u.pathname.slice(1).split("/")[0] || null;
     }
-    if (u.hostname.includes("youtube.com")) {
-      return u.searchParams.get("v");
+    if (u.hostname.endsWith("youtube.com")) {
+      const v = u.searchParams.get("v");
+      if (v) return v;
+      // /shorts/ID, /embed/ID, /live/ID 형태도 같은 영상을 가리킨다.
+      const [section, id] = u.pathname.split("/").filter(Boolean);
+      if (["shorts", "embed", "live", "v"].includes(section) && id) return id;
+      return null;
     }
     return null;
   } catch {
@@ -51,11 +56,9 @@ export async function deleteTrack(trackId) {
   if (error) throw error;
 }
 
+// 대기열은 같은 곡을 여러 번 트는 걸 허용한다. 중복 검사는 내 재생목록 쪽에만 둔다.
 export async function addTrackFromLibrary({ youtubeId, title, uid }) {
   const existing = await fetchTracks();
-  if (existing.some((t) => t.youtube_id === youtubeId)) {
-    throw new Error("이미 대기열에 있는 곡이에요.");
-  }
   const { error } = await supabase.from("tracks").insert({
     youtube_id: youtubeId,
     title,

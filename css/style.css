@@ -344,6 +344,29 @@ main#app.cabinet{
   padding: 18px 20px 24px;
 }
 
+/* 재생목록 목록 아래에 붙는 좁히기 검색. 목록이 주인공이므로 위가 아니라 아래에 둔다. */
+.bank-filter {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--seam);
+}
+
+.bank-filter .field {
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 12.5px;
+}
+
+.bank-filter .key {
+  flex: none;
+  padding: 6px 10px;
+  font-size: 10px;
+}
+
 .bank {
   display: flex;
   align-items: center;
@@ -610,9 +633,6 @@ main#app.cabinet{
 .out-bar i{display:block;height:100%;background:var(--phosphor);box-shadow:0 0 8px rgba(255,179,92,.8);transition:width 90ms linear}
 .out-calc{font-family:var(--font-crt);font-size:14px;letter-spacing:.04em;color:var(--phosphor-dim)}
 
-.save-to-playlist-row{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;color:#5f4d38}
-.save-check-label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;font-family:var(--font-m);font-size:11px}
-.select-inline{flex:1;min-height:30px;padding:2px 8px;font-size:12px;border:1px solid var(--seam);border-radius:4px;background:#fdf8ec}
 
 /* ── 내 재생목록 → 대기열에 넣기 ───────────────────── */
 .pick{margin:0 0 16px;padding:13px 14px 14px;border:1px solid var(--seam);border-radius:6px;
@@ -631,6 +651,17 @@ main#app.cabinet{
 .pick-foot .note{margin:0;margin-right:auto}
 .strip .to-room{flex:none;padding:5px 10px;font-size:10.5px;letter-spacing:.06em}
 .strip .to-room:disabled{opacity:.45;box-shadow:none;cursor:default}
+.strip .to-lib{flex:none;padding:5px 10px;font-size:10.5px;letter-spacing:.06em}
+
+/* 대기열 곡을 담을 재생목록 고르는 모달 */
+.save-options{margin:14px 0 0;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.save-option{display:flex;align-items:center;gap:10px;padding:9px 11px;
+  border:1px solid var(--seam);border-radius:4px;background:#fdf8ec;font-size:13.5px;cursor:pointer}
+.save-option:hover{background:#f4ead4}
+.save-option:has(input:checked){border-color:var(--pilot);background:#f7e7d2;
+  box-shadow:inset 0 0 0 1px rgba(210,58,43,.35)}
+.save-option input{accent-color:var(--pilot)}
+.save-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .dj-hint{margin:14px 0 0;padding:11px 13px;border:1px dashed var(--seam);border-radius:5px;
   font-size:12.5px;color:#5f4d38;background:rgba(255,255,255,.4)}
 

@@ -6,10 +6,11 @@ import {
   getRoomViewState, canDelegateTo,
 } from "./roles.js";
 import { initPresence } from "./presence.js";
-import { addTrack, fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js";
+import { fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js";
+import { searchUnified } from "./youtubeSearch.js";
 import {
-  fetchPlaylists, fetchPlaylistTracks, partitionLibraryTracks, addTrackToPlaylist,
-  playlistOptionsChanged,
+  fetchPlaylists, fetchPlaylistTracks, addTrackToPlaylist,
+  playlistOptionsChanged, getSaveToPlaylistState,
 } from "./playlists.js";
 import {
   unlockAudio, fetchPlaybackState, subscribePlaybackState, applyPlaybackState,
@@ -99,7 +100,7 @@ function renderPresence(users, myUid, djUid, profiles) {
   }
 }
 
-function renderTracks(tracks, amDj, currentTrackId) {
+function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
   const list = document.getElementById("track-list");
   const queueCount = document.getElementById("queue-count");
   if (queueCount) queueCount.textContent = String(tracks.length).padStart(2, "0");
@@ -110,7 +111,7 @@ function renderTracks(tracks, amDj, currentTrackId) {
     empty.innerHTML = `
       <span class="empty-state-icon" aria-hidden="true">♫</span>
       <strong>아직 추가된 음악이 없어요</strong>
-      <span>${amDj ? "위에 유튜브 링크를 붙여 첫 곡을 추가해 보세요." : "DJ가 곧 첫 곡을 골라 줄 거예요."}</span>
+      <span>${amDj ? "위에서 링크나 곡 제목으로 검색해 첫 곡을 추가해 보세요." : "DJ가 곧 첫 곡을 골라 줄 거예요."}</span>
     `;
     list.appendChild(empty);
     return;
@@ -150,6 +151,20 @@ function renderTracks(tracks, amDj, currentTrackId) {
     row.textContent = t.title;
 
     li.append(number, bulb, row);
+
+    // 대기열의 곡을 내 재생목록으로 담는다. 어느 목록에 넣을지는 모달에서 고른다.
+    if (saveToPlaylist?.showButton) {
+      const toLib = document.createElement("button");
+      toLib.type = "button";
+      toLib.className = "key to-lib";
+      toLib.textContent = "플리로";
+      toLib.setAttribute("aria-label", `${t.title} 내 재생목록에 저장`);
+      toLib.addEventListener("click", (event) => {
+        event.stopPropagation();
+        saveToPlaylist.onRequest({ youtubeId: t.youtube_id, title: t.title });
+      });
+      li.appendChild(toLib);
+    }
 
     if (amDj) {
       const cue = document.createElement("button");
@@ -345,6 +360,7 @@ async function bootstrap() {
   });
 
   let playlistUIStarted = false;
+  let playlistUIHandle = null;
   function selectMainTab(which) {
     const isRoom = which === "room";
     document.getElementById("main-tab-room").setAttribute("aria-selected", String(isRoom));
@@ -353,7 +369,7 @@ async function bootstrap() {
     document.getElementById("playlists-view").classList.toggle("hidden", isRoom);
     if (!isRoom && !playlistUIStarted) {
       playlistUIStarted = true;
-      initPlaylistUI({ ownerUid: identity.uid, amDj });
+      playlistUIHandle = initPlaylistUI({ ownerUid: identity.uid, amDj });
     }
   }
   document.getElementById("main-tab-room").addEventListener("click", () => selectMainTab("room"));
@@ -413,7 +429,7 @@ async function bootstrap() {
       document.getElementById("add-track-form").classList.remove("hidden");
       currentView = renderRoomAccess(settings, identity);
       renderVolume(currentView);
-      renderTracks(currentTracks, amDj, currentTrackId);
+      renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
       renderLibraryPicker().catch(console.error);
       enableDjControls();
       startDjHeartbeat();
@@ -435,28 +451,128 @@ async function bootstrap() {
 
   if (amDj) startDjHeartbeat();
 
-  initSaveToPlaylist().catch(console.error);
+  // ── 대기열 곡 → 내 재생목록 저장 모달 ──────────────────────
+  let myPlaylists = [];
+  let saveTargetTrack = null;
+  let selectedSavePlaylistId = null;
 
-  async function initSaveToPlaylist() {
-    if (identity.isGuest) return;
-    const row = document.getElementById("save-to-playlist-row");
-    const select = document.getElementById("save-to-playlist-select");
-    const check = document.getElementById("save-to-playlist-check");
-    if (!row || !select || !check) return;
+  const saveModal = document.getElementById("save-track-modal");
+  const saveOptions = document.getElementById("save-track-options");
+  const saveStatus = document.getElementById("save-track-status");
+  const saveSubmit = document.getElementById("save-track-submit");
 
-    const playlists = await fetchPlaylists(identity.uid);
-    if (playlists.length > 0) {
-      row.classList.remove("hidden");
-      select.innerHTML = '<option value="">(재생목록 선택)</option>';
-      playlists.forEach((p) => {
-        const opt = document.createElement("option");
-        opt.value = String(p.id);
-        opt.textContent = p.name;
-        select.appendChild(opt);
+  function closeSaveModal() {
+    saveTargetTrack = null;
+    saveModal.classList.add("hidden");
+  }
+
+  function renderSaveOptions() {
+    saveOptions.innerHTML = "";
+    myPlaylists.forEach((p) => {
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      label.className = "save-option";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "save-track-playlist";
+      radio.value = String(p.id);
+      radio.checked = String(p.id) === String(selectedSavePlaylistId);
+      radio.addEventListener("change", () => {
+        selectedSavePlaylistId = p.id;
       });
-      check.addEventListener("change", () => {
-        select.disabled = !check.checked;
+      const name = document.createElement("span");
+      name.textContent = p.name;
+      label.append(radio, name);
+      li.appendChild(label);
+      saveOptions.appendChild(li);
+    });
+  }
+
+  async function openSaveModal(track) {
+    saveTargetTrack = track;
+    saveStatus.className = "note";
+    saveStatus.textContent = "";
+    document.getElementById("save-track-name").textContent = track.title;
+    saveModal.classList.remove("hidden");
+
+    try {
+      myPlaylists = await fetchPlaylists(identity.uid);
+    } catch (err) {
+      console.error(err);
+      myPlaylists = [];
+    }
+    const state = getSaveToPlaylistState({ isGuest: identity.isGuest, playlists: myPlaylists });
+    if (!myPlaylists.some((p) => String(p.id) === String(selectedSavePlaylistId))) {
+      selectedSavePlaylistId = myPlaylists[0]?.id ?? null;
+    }
+    renderSaveOptions();
+    saveSubmit.disabled = !state.canSave;
+    if (!state.canSave) {
+      saveStatus.classList.add("err");
+      saveStatus.textContent = state.message;
+    }
+  }
+
+  saveSubmit.addEventListener("click", async () => {
+    if (!saveTargetTrack || !selectedSavePlaylistId) return;
+    saveSubmit.disabled = true;
+    saveStatus.className = "note";
+    saveStatus.textContent = "저장하는 중…";
+    try {
+      await addTrackToPlaylist({
+        playlistId: Number(selectedSavePlaylistId),
+        youtubeId: saveTargetTrack.youtubeId,
+        title: saveTargetTrack.title,
       });
+      closeSaveModal();
+      const status = document.getElementById("add-track-status");
+      status.className = "note ok";
+      status.textContent = "내 재생목록에 저장했어요.";
+      renderLibraryPicker().catch(console.error);
+      // 내 재생목록 탭이 이미 떠 있으면 저장분이 바로 보이도록 다시 읽는다.
+      playlistUIHandle?.refresh();
+    } catch (err) {
+      saveStatus.classList.add("err");
+      saveStatus.textContent = err.message ?? "저장하지 못했어요.";
+    } finally {
+      saveSubmit.disabled = false;
+    }
+  });
+  document.getElementById("save-track-cancel").addEventListener("click", closeSaveModal);
+  saveModal.addEventListener("click", (event) => {
+    if (event.target === saveModal) closeSaveModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !saveModal.classList.contains("hidden")) closeSaveModal();
+  });
+
+  const saveToPlaylist = {
+    showButton: !identity.isGuest,
+    onRequest: (track) => openSaveModal(track).catch(console.error),
+  };
+
+  // 링크든 곡 제목이든 같은 입력창에서 검색하고, 결과 중 하나를 골라 대기열에 넣는다.
+  async function addSearchResultToQueue(result, resultButton) {
+    const status = document.getElementById("add-track-status");
+    const input = document.getElementById("youtube-url-input");
+    const resultsList = document.getElementById("queue-search-results");
+    status.className = "note";
+    resultButton.disabled = true;
+    try {
+      await addTrackFromLibrary({
+        youtubeId: result.videoId,
+        title: result.title,
+        uid: identity.uid,
+      });
+      input.value = "";
+      resultsList.innerHTML = "";
+      status.classList.add("ok");
+      status.textContent = `"${result.title}" 대기열에 추가했어요.`;
+    } catch (err) {
+      console.error(err);
+      resultButton.disabled = false;
+      status.classList.add("err");
+      status.textContent = err.message ?? "곡을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.";
     }
   }
 
@@ -464,44 +580,38 @@ async function bootstrap() {
     const input = document.getElementById("youtube-url-input");
     const button = document.getElementById("add-track-button");
     const status = document.getElementById("add-track-status");
-    const url = input.value.trim();
+    const resultsList = document.getElementById("queue-search-results");
+    resultsList.innerHTML = "";
     status.className = "note";
-    if (!url) {
+    if (!input.value.trim()) {
       status.classList.add("err");
-      status.textContent = "추가할 유튜브 링크를 입력해 주세요.";
+      status.textContent = "유튜브 링크나 곡 제목을 입력해 주세요.";
       input.focus();
       return;
     }
     button.disabled = true;
-    button.textContent = "추가 중…";
-    status.textContent = "곡 정보를 확인하고 있어요.";
+    button.textContent = "찾는 중…";
+    status.textContent = "곡을 찾고 있어요.";
     try {
-      const added = await addTrack({ url, uid: identity.uid });
-      const check = document.getElementById("save-to-playlist-check");
-      const select = document.getElementById("save-to-playlist-select");
-      if (check?.checked && select?.value && added) {
-        try {
-          await addTrackToPlaylist({
-            playlistId: Number(select.value),
-            youtubeId: added.youtubeId,
-            title: added.title,
-          });
-        } catch (saveErr) {
-          console.warn("내 재생목록 추가 실패 또는 중복:", saveErr.message);
-        }
+      const results = await searchUnified({ input: input.value });
+      status.textContent = results.length ? "추가할 곡을 골라 주세요." : "검색 결과가 없어요.";
+      for (const r of results) {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "youtube-search-result-button";
+        btn.textContent = r.title;
+        btn.addEventListener("click", () => addSearchResultToQueue(r, btn));
+        li.appendChild(btn);
+        resultsList.appendChild(li);
       }
-      input.value = "";
-      status.classList.add("ok");
-      status.textContent = "재생목록에 추가했어요.";
     } catch (err) {
       console.error(err);
       status.classList.add("err");
-      status.textContent = err.message === "유효하지 않은 유튜브 링크"
-        ? "올바른 유튜브 링크를 입력해 주세요."
-        : "곡을 추가하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      status.textContent = err.message ?? "곡을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.";
     } finally {
       button.disabled = false;
-      button.textContent = "추가";
+      button.textContent = "검색";
     }
   });
 
@@ -557,7 +667,10 @@ async function bootstrap() {
     if (!select || !list || !note || !allButton) return;
 
     const playlists = await fetchPlaylists(identity.uid);
-    if (select.options.length !== playlists.length) {
+    // 개수만 비교하면 다른 탭에서 만들거나 이름을 바꾼 재생목록이 반영되지 않는다.
+    const currentOptions = [...select.options].map((o) => ({ value: o.value, label: o.textContent }));
+    if (playlistOptionsChanged(currentOptions, playlists)) {
+      const previous = select.value;
       select.innerHTML = "";
       playlists.forEach((p) => {
         const opt = document.createElement("option");
@@ -565,6 +678,7 @@ async function bootstrap() {
         opt.textContent = p.name;
         select.appendChild(opt);
       });
+      if (playlists.some((p) => String(p.id) === previous)) select.value = previous;
     }
     if (!playlists.length) {
       note.textContent = "내 재생목록이 아직 없어요.";
@@ -574,7 +688,6 @@ async function bootstrap() {
     }
 
     const libraryTracks = await fetchPlaylistTracks(Number(select.value || playlists[0].id));
-    const { addable, already } = partitionLibraryTracks(libraryTracks, currentTracks);
 
     list.innerHTML = "";
     libraryTracks.forEach((t, index) => {
@@ -588,9 +701,7 @@ async function bootstrap() {
       const button = document.createElement("button");
       button.className = "key pick-add";
       button.type = "button";
-      const isIn = already.some((x) => x.youtube_id === t.youtube_id);
-      button.textContent = isIn ? "대기열에 있음" : "＋ 대기열";
-      button.disabled = isIn;
+      button.textContent = "＋ 대기열";
       button.addEventListener("click", async () => {
         button.disabled = true;
         try {
@@ -609,10 +720,8 @@ async function bootstrap() {
 
     const selectedOption = select.selectedOptions[0];
     const playlistTitle = selectedOption ? selectedOption.textContent : "";
-    note.textContent = addable.length
-      ? `${playlistTitle} · 아직 대기열에 없는 곡 ${addable.length}개`
-      : `${playlistTitle} · 전부 대기열에 들어가 있어요`;
-    allButton.disabled = addable.length === 0;
+    note.textContent = `${playlistTitle} · 곡 ${libraryTracks.length}개`;
+    allButton.disabled = libraryTracks.length === 0;
   }
 
   document.getElementById("library-picker-select")?.addEventListener("change", renderLibraryPicker);
@@ -620,20 +729,19 @@ async function bootstrap() {
     const select = document.getElementById("library-picker-select");
     if (!select?.value) return;
     const list = await fetchPlaylistTracks(Number(select.value));
-    const { addable } = partitionLibraryTracks(list, currentTracks);
-    for (const t of addable) {
+    for (const t of list) {
       await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: identity.uid });
     }
     currentTracks = await fetchTracks();
     await renderLibraryPicker();
   });
 
-  renderTracks(currentTracks, amDj, currentTrackId);
+  renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
   renderNowPlaying(currentTracks, currentTrackId);
   renderLibraryPicker().catch(console.error);
   subscribeTracks((tracks) => {
     currentTracks = tracks;
-    renderTracks(tracks, amDj, currentTrackId);
+    renderTracks(tracks, amDj, currentTrackId, saveToPlaylist);
     renderNowPlaying(tracks, currentTrackId);
     renderLibraryPicker().catch(console.error);
   });
@@ -643,7 +751,7 @@ async function bootstrap() {
     updatePlaybackToggle(nextState.is_playing);
     if (nextState.current_track_id !== currentTrackId) {
       currentTrackId = nextState.current_track_id;
-      renderTracks(currentTracks, amDj, currentTrackId);
+      renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
       renderNowPlaying(currentTracks, currentTrackId);
     }
     await applyPlaybackState(nextState, currentTracks);

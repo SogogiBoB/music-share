@@ -311,31 +311,6 @@ test("볼륨은 0~100 으로 잘린다", () => {
   assert.equal(clampVolume(62.7), 63);
 });
 
-import { partitionLibraryTracks } from "../js/playlists.js";
-
-test("이미 대기열에 있는 곡과 아직 없는 곡을 나눈다", () => {
-  const library = [
-    { youtube_id: "a", title: "A" },
-    { youtube_id: "b", title: "B" },
-    { youtube_id: "c", title: "C" },
-  ];
-  const queue = [{ youtube_id: "b", title: "B" }];
-  const { addable, already } = partitionLibraryTracks(library, queue);
-  assert.deepEqual(addable.map((t) => t.youtube_id), ["a", "c"]);
-  assert.deepEqual(already.map((t) => t.youtube_id), ["b"]);
-});
-
-test("대기열이 비어 있으면 전부 담을 수 있다", () => {
-  const library = [{ youtube_id: "a", title: "A" }];
-  assert.equal(partitionLibraryTracks(library, []).addable.length, 1);
-  assert.equal(partitionLibraryTracks(library, []).already.length, 0);
-});
-
-test("빈 재생목록이면 양쪽 다 비어 있다", () => {
-  const { addable, already } = partitionLibraryTracks([], [{ youtube_id: "a", title: "A" }]);
-  assert.deepEqual(addable, []);
-  assert.deepEqual(already, []);
-});
 
 test("5초 이상 재생 중 이전 버튼을 누르면 현재 곡의 처음(0초)으로 리셋", () => {
   const tracks = [{ id: 1 }, { id: 2 }, { id: 3 }];
@@ -559,4 +534,91 @@ test("playlistOptionsChanged: 개수가 같아도 id 나 이름이 다르면 다
 test("playlistOptionsChanged: 개수가 다르면 다시 그린다", () => {
   assert.equal(playlistOptionsChanged([], [{ id: 1, name: "밤" }]), true);
   assert.equal(playlistOptionsChanged([{ value: "1", label: "밤" }], []), true);
+});
+
+// ── 링크/키워드 통합 검색 ──────────────────────────────────────
+// 입력창 하나로 링크와 키워드를 모두 받는다. 링크면 그 곡 하나를 결과로,
+// 키워드면 유튜브 검색 결과를 보여주고 그중 하나를 골라 추가한다.
+import { classifySearchInput, searchUnified } from "../js/youtubeSearch.js";
+
+test("classifySearchInput: 빈 입력", () => {
+  assert.deepEqual(classifySearchInput(""), { kind: "empty" });
+  assert.deepEqual(classifySearchInput("   "), { kind: "empty" });
+  assert.deepEqual(classifySearchInput(null), { kind: "empty" });
+});
+
+test("classifySearchInput: 유튜브 링크는 videoId 로 분류", () => {
+  assert.deepEqual(classifySearchInput("https://youtu.be/dQw4w9WgXcQ"),
+    { kind: "url", videoId: "dQw4w9WgXcQ" });
+  assert.deepEqual(classifySearchInput("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=30s"),
+    { kind: "url", videoId: "dQw4w9WgXcQ" });
+  assert.deepEqual(classifySearchInput("  https://m.youtube.com/watch?v=dQw4w9WgXcQ  "),
+    { kind: "url", videoId: "dQw4w9WgXcQ" });
+  assert.deepEqual(classifySearchInput("https://www.youtube.com/shorts/dQw4w9WgXcQ"),
+    { kind: "url", videoId: "dQw4w9WgXcQ" });
+});
+
+test("classifySearchInput: 11자 영상 id 를 그대로 붙여넣어도 링크로 본다", () => {
+  assert.deepEqual(classifySearchInput("dQw4w9WgXcQ"), { kind: "url", videoId: "dQw4w9WgXcQ" });
+});
+
+test("classifySearchInput: 그 밖의 입력은 키워드", () => {
+  assert.deepEqual(classifySearchInput("aespa lemonade"), { kind: "keyword", query: "aespa lemonade" });
+  assert.deepEqual(classifySearchInput("  뉴진스 하입보이 "), { kind: "keyword", query: "뉴진스 하입보이" });
+  // 유튜브 링크처럼 보이지만 videoId 가 없는 주소는 키워드로 흘려보내지 않고 오류로 알린다
+  assert.deepEqual(classifySearchInput("https://www.youtube.com/results?search_query=x"),
+    { kind: "invalid-url" });
+});
+
+test("searchUnified: 링크 입력이면 그 곡 하나만 결과로 준다", async () => {
+  const results = await searchUnified({
+    input: "https://youtu.be/dQw4w9WgXcQ",
+    searchByKeyword: async () => { throw new Error("키워드 검색이 호출되면 안 된다"); },
+    fetchTitleById: async (id) => `제목:${id}`,
+  });
+  assert.deepEqual(results, [{ videoId: "dQw4w9WgXcQ", title: "제목:dQw4w9WgXcQ" }]);
+});
+
+test("searchUnified: 키워드 입력이면 검색 결과 목록을 준다", async () => {
+  const results = await searchUnified({
+    input: "aespa lemonade",
+    searchByKeyword: async (q) => [{ videoId: "a1", title: `${q} 1` }, { videoId: "b2", title: `${q} 2` }],
+    fetchTitleById: async () => { throw new Error("링크 조회가 호출되면 안 된다"); },
+  });
+  assert.deepEqual(results, [{ videoId: "a1", title: "aespa lemonade 1" }, { videoId: "b2", title: "aespa lemonade 2" }]);
+});
+
+test("searchUnified: 빈 입력은 빈 결과, 잘못된 유튜브 주소는 오류", async () => {
+  assert.deepEqual(await searchUnified({ input: "  ", searchByKeyword: async () => [], fetchTitleById: async () => "" }), []);
+  await assert.rejects(
+    () => searchUnified({ input: "https://www.youtube.com/results?search_query=x", searchByKeyword: async () => [], fetchTitleById: async () => "" }),
+    /유튜브 링크/
+  );
+});
+
+test("parseYoutubeId: shorts·embed·music 주소도 인식", () => {
+  assert.equal(parseYoutubeId("https://www.youtube.com/shorts/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(parseYoutubeId("https://www.youtube.com/embed/dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(parseYoutubeId("https://music.youtube.com/watch?v=dQw4w9WgXcQ"), "dQw4w9WgXcQ");
+  assert.equal(parseYoutubeId("https://www.youtube.com/results?search_query=x"), null);
+});
+
+// ── 대기열 곡을 내 재생목록으로 저장 ──────────────────────────
+// 대기열 위의 "내 재생목록에도 저장" 체크박스를 없애고, 곡마다 [플리로] 버튼으로
+// 저장 대상 재생목록을 고르게 바꾼다. 게스트는 재생목록 자체가 없으므로 숨긴다.
+const { getSaveToPlaylistState } = playlists;
+
+test("getSaveToPlaylistState: 게스트에게는 버튼을 보여주지 않는다", () => {
+  assert.deepEqual(getSaveToPlaylistState({ isGuest: true, playlists: [{ id: 1, name: "밤" }] }),
+    { showButton: false, canSave: false, message: "" });
+});
+
+test("getSaveToPlaylistState: 재생목록이 없으면 버튼은 보이되 저장은 막고 안내한다", () => {
+  assert.deepEqual(getSaveToPlaylistState({ isGuest: false, playlists: [] }),
+    { showButton: true, canSave: false, message: "내 재생목록을 먼저 만들어 주세요." });
+});
+
+test("getSaveToPlaylistState: 재생목록이 있으면 저장 가능", () => {
+  assert.deepEqual(getSaveToPlaylistState({ isGuest: false, playlists: [{ id: 1, name: "밤" }] }),
+    { showButton: true, canSave: true, message: "" });
 });

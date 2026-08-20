@@ -83,6 +83,24 @@
     </div>
   </div>
 
+  <div id="save-track-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="save-track-title">
+    <div class="cabinet gate">
+      <section class="face">
+        <div class="plate">save<span class="code">대기열 곡을 내 재생목록으로</span></div>
+        <div class="body">
+          <h2 id="save-track-title">어느 재생목록에<br>넣을까요?</h2>
+          <p class="sub" id="save-track-name">—</p>
+          <ul id="save-track-options" class="save-options" role="radiogroup" aria-label="저장할 내 재생목록"></ul>
+          <p id="save-track-status" class="note" role="status" aria-live="polite"></p>
+          <div class="save-actions">
+            <button id="save-track-cancel" class="key" type="button">취소</button>
+            <button id="save-track-submit" class="key key-on" type="button">저장</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
   <main id="app" class="cabinet hidden">
     <section class="face">
       <div class="rail">
@@ -209,16 +227,10 @@
 
           <div id="add-track-form" class="hidden">
             <div class="addrow">
-              <input id="youtube-url-input" class="field" type="url" inputmode="url" autocomplete="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="추가할 유튜브 링크" aria-describedby="add-track-status">
-              <button id="add-track-button" class="key" type="button">추가</button>
+              <input id="youtube-url-input" class="field" type="text" placeholder="유튜브 링크 또는 곡 제목" aria-label="유튜브 링크 또는 곡 제목으로 검색" aria-describedby="add-track-status">
+              <button id="add-track-button" class="key" type="button">검색</button>
             </div>
-            <div id="save-to-playlist-row" class="save-to-playlist-row hidden">
-              <label class="save-check-label" for="save-to-playlist-check">
-                <input type="checkbox" id="save-to-playlist-check">
-                <span>내 재생목록에도 저장:</span>
-              </label>
-              <select id="save-to-playlist-select" class="field select-inline" disabled aria-label="저장할 내 재생목록"></select>
-            </div>
+            <ul id="queue-search-results" class="results" aria-live="polite"></ul>
             <p id="add-track-status" class="note" role="status" aria-live="polite"></p>
           </div>
 
@@ -241,16 +253,6 @@
 
     <div id="playlists-view" class="hidden" role="tabpanel">
       <section class="face">
-        <div class="plate">search<span class="code">곡 제목으로 전체 재생목록 검색</span></div>
-        <div class="body">
-          <div class="addrow">
-            <input id="playlist-search-input" class="field" type="text" placeholder="곡 제목으로 재생목록 검색" aria-label="곡 제목으로 재생목록 검색">
-            <button id="playlist-search-button" class="key" type="button">검색</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="face">
         <div class="lib">
           <div class="lib-side">
             <div class="plate">banks<span class="code">playlists</span></div>
@@ -261,6 +263,10 @@
               </div>
               <p id="playlist-manager-status" class="note" role="status" aria-live="polite"></p>
               <ul id="playlist-list" aria-live="polite"></ul>
+              <div class="bank-filter">
+                <input id="playlist-search-input" class="field" type="search" placeholder="곡 제목으로 목록 좁히기" aria-label="곡 제목으로 재생목록 검색">
+                <button id="playlist-search-button" class="key" type="button" aria-label="재생목록 검색">검색</button>
+              </div>
             </div>
           </div>
 
@@ -274,15 +280,9 @@
                 <h2 id="playlist-detail-name" style="font-size:19px"></h2>
               </div>
 
-              <span class="lab">유튜브 링크로 추가</span>
+              <span class="lab">곡 찾아서 추가</span>
               <div class="addrow">
-                <input id="playlist-track-url-input" class="field" type="url" placeholder="유튜브 링크를 붙여넣으세요" aria-label="유튜브 링크로 추가">
-                <button id="playlist-track-url-button" class="key" type="button">추가</button>
-              </div>
-
-              <span class="lab">유튜브 검색으로 추가</span>
-              <div class="addrow">
-                <input id="playlist-track-search-input" class="field" type="text" placeholder="검색할 곡 제목" aria-label="유튜브 검색">
+                <input id="playlist-track-search-input" class="field" type="text" placeholder="유튜브 링크 또는 곡 제목" aria-label="유튜브 링크 또는 곡 제목으로 검색" aria-describedby="playlist-track-status">
                 <button id="playlist-track-search-button" class="key" type="button">검색</button>
               </div>
               <ul id="playlist-track-search-results" class="results" aria-live="polite"></ul>
@@ -310,6 +310,6 @@
     };
   </script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script type="module" src="js/main.js?v=20260820-fix5"></script>
+  <script type="module" src="js/main.js?v=20260820-savemodal"></script>
 </body>
 </html>

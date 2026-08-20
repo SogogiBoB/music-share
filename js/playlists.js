@@ -4,15 +4,6 @@ export function hasDuplicateTrack(tracks, youtubeId) {
   return tracks.some((t) => t.youtube_id === youtubeId);
 }
 
-export function partitionLibraryTracks(libraryTracks, queueTracks) {
-  const addable = [];
-  const already = [];
-  libraryTracks.forEach((t) => {
-    (hasDuplicateTrack(queueTracks, t.youtube_id) ? already : addable).push(t);
-  });
-  return { addable, already };
-}
-
 export function computeReorderedPositions(tracks, fromIndex, toIndex) {
   const reordered = tracks.slice();
   const [moved] = reordered.splice(fromIndex, 1);
@@ -26,6 +17,15 @@ export function filterPlaylistsByQuery(playlistsWithTracks, query) {
   return playlistsWithTracks.filter((p) =>
     p.tracks.some((t) => t.title.toLowerCase().includes(term))
   );
+}
+
+// 대기열 곡을 내 재생목록에 저장할 수 있는 상태인지 판단한다.
+export function getSaveToPlaylistState({ isGuest = false, playlists = [] } = {}) {
+  if (isGuest) return { showButton: false, canSave: false, message: "" };
+  if (!playlists.length) {
+    return { showButton: true, canSave: false, message: "내 재생목록을 먼저 만들어 주세요." };
+  }
+  return { showButton: true, canSave: true, message: "" };
 }
 
 // 셀렉트 옵션을 다시 그려야 하는지 판단한다. 개수만 비교하면 다른 탭에서 만든
