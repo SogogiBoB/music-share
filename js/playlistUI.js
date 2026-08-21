@@ -1,7 +1,7 @@
 import { addTrackFromLibrary } from "./playlist.js";
 import {
   fetchAllPlaylistsWithTracks, createPlaylist, renamePlaylist, deletePlaylist,
-  removeTrackFromPlaylist, moveTrackToPlaylist,
+  removeTrackFromPlaylist, moveTrackToPlaylist, copyTrackToPlaylist,
   computeReorderedPositions, persistReorder,
 } from "./playlists.js";
 
@@ -28,7 +28,7 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
   function renderPlaylistList() {
     const list = document.getElementById("playlist-list");
     list.innerHTML = "";
-    playlists.forEach((p, index) => {
+    playlists.forEach((p) => {
       const isOpen = p.id === selectedPlaylistId;
 
       const li = document.createElement("li");
@@ -44,10 +44,6 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
       btn.setAttribute("aria-expanded", String(isOpen));
       if (isOpen) btn.classList.add("is-on");
 
-      const bk = document.createElement("span");
-      bk.className = "bk";
-      bk.textContent = String(index + 1).padStart(2, "0");
-
       const bn = document.createElement("span");
       bn.className = "bn";
       bn.textContent = p.name;
@@ -56,7 +52,7 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
       bc.className = "bc";
       bc.textContent = String(p.tracks.length);
 
-      btn.append(bk, bn, bc);
+      btn.append(bn, bc);
 
       // 같은 목록을 다시 누르면 접는다.
       btn.addEventListener("click", () => {
@@ -114,32 +110,16 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
     });
   }
 
-  function renderMoveDropdown(track) {
-    const select = document.createElement("select");
-    select.className = "move";
-    const placeholder = document.createElement("option");
-    placeholder.textContent = "다른 재생목록으로 이동";
-    placeholder.value = "";
-    select.appendChild(placeholder);
-    for (const p of playlists) {
-      if (p.id === selectedPlaylistId) continue;
-      const opt = document.createElement("option");
-      opt.value = String(p.id);
-      opt.textContent = p.name;
-      select.appendChild(opt);
-    }
-    select.addEventListener("change", async () => {
-      const targetId = Number(select.value);
-      if (!targetId) return;
-      try {
-        await moveTrackToPlaylist({ trackId: track.id, targetPlaylistId: targetId });
-        await reload();
-      } catch (err) {
-        setStatus(err.message ?? "이동하지 못했어요.", true);
-        select.value = "";
-      }
-    });
-    return select;
+  // 다른 재생목록으로 보내기: 버튼 → 모달에서 대상 목록을 고르고 이동/복사를 누른다.
+  function renderMoveButton(track, playlist) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "key move";
+    btn.textContent = "이동·복사";
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.setAttribute("aria-label", `${track.title} 다른 재생목록으로 이동하거나 복사`);
+    btn.addEventListener("click", () => openMoveModal(track, playlist));
+    return btn;
   }
 
   function renderTrackPanel(playlist) {
@@ -184,10 +164,6 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
         }
       });
 
-      const number = document.createElement("span");
-      number.className = "no";
-      number.textContent = String(index + 1).padStart(2, "0");
-
       const title = document.createElement("span");
       title.className = "tt";
       title.textContent = t.title;
@@ -206,7 +182,7 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
         }
       });
 
-      const elements = [number, title, renderMoveDropdown(t)];
+      const elements = [title, renderMoveButton(t, playlist)];
       if (amDj) {
         const toQueue = document.createElement("button");
         toQueue.className = "key to-room";
@@ -303,6 +279,104 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
   });
   newModal.addEventListener("click", (e) => {
     if (e.target === newModal) closeNewPlaylistModal();
+  });
+
+  // 이동·복사 모달: 대상 재생목록을 라디오로 고르고, 이동/복사 버튼으로 동작을 정한다.
+  const moveModal = document.getElementById("move-track-modal");
+  const moveOptions = document.getElementById("move-track-options");
+  const moveStatusEl = document.getElementById("move-track-status");
+  const moveSubmit = document.getElementById("move-track-submit");
+  const moveCopy = document.getElementById("move-track-copy");
+  let moveTargetTrack = null;
+  let moveSourcePlaylistId = null;
+  let moveTargetPlaylistId = null;
+  let moveOpener = null;
+
+  function setMoveStatus(text, isError = false) {
+    moveStatusEl.textContent = text;
+    moveStatusEl.classList.toggle("is-error", isError);
+  }
+
+  function moveCandidates() {
+    return playlists.filter((p) => String(p.id) !== String(moveSourcePlaylistId));
+  }
+
+  function renderMoveOptions() {
+    moveOptions.innerHTML = "";
+    for (const p of moveCandidates()) {
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      label.className = "save-option";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "move-track-playlist";
+      radio.value = String(p.id);
+      radio.checked = String(p.id) === String(moveTargetPlaylistId);
+      radio.addEventListener("change", () => { moveTargetPlaylistId = p.id; });
+      const name = document.createElement("span");
+      name.textContent = p.name;
+      label.append(radio, name);
+      li.appendChild(label);
+      moveOptions.appendChild(li);
+    }
+  }
+
+  function openMoveModal(track, playlist) {
+    moveTargetTrack = track;
+    moveSourcePlaylistId = playlist.id;
+    moveOpener = document.activeElement;
+    document.getElementById("move-track-name").textContent = track.title;
+
+    const candidates = moveCandidates();
+    moveTargetPlaylistId = candidates[0]?.id ?? null;
+    renderMoveOptions();
+
+    const canSend = candidates.length > 0;
+    moveSubmit.disabled = !canSend;
+    moveCopy.disabled = !canSend;
+    setMoveStatus(canSend ? "" : "보낼 다른 재생목록이 없어요.", !canSend);
+
+    moveModal.classList.remove("hidden");
+    (moveOptions.querySelector("input") ?? moveSubmit).focus();
+  }
+
+  function closeMoveModal() {
+    moveModal.classList.add("hidden");
+    moveTargetTrack = null;
+    moveSourcePlaylistId = null;
+    moveOpener?.focus?.();
+    moveOpener = null;
+  }
+
+  async function sendTrack(action) {
+    if (!moveTargetTrack || !moveTargetPlaylistId) return;
+    const isMove = action === "move";
+    moveSubmit.disabled = true;
+    moveCopy.disabled = true;
+    setMoveStatus(isMove ? "옮기는 중…" : "복사하는 중…");
+    try {
+      const run = isMove ? moveTrackToPlaylist : copyTrackToPlaylist;
+      await run({ trackId: moveTargetTrack.id, targetPlaylistId: Number(moveTargetPlaylistId) });
+      closeMoveModal();
+      setStatus(isMove ? "다른 재생목록으로 옮겼어요." : "다른 재생목록에 복사했어요.");
+      await reload();
+    } catch (err) {
+      console.error(err);
+      setMoveStatus(err.message ?? (isMove ? "이동하지 못했어요." : "복사하지 못했어요."), true);
+    } finally {
+      moveSubmit.disabled = false;
+      moveCopy.disabled = false;
+    }
+  }
+
+  moveSubmit.addEventListener("click", () => sendTrack("move"));
+  moveCopy.addEventListener("click", () => sendTrack("copy"));
+  document.getElementById("move-track-cancel").addEventListener("click", closeMoveModal);
+  moveModal.addEventListener("click", (e) => {
+    if (e.target === moveModal) closeMoveModal();
+  });
+  moveModal.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMoveModal();
   });
 
   // 곡 검색·추가는 라이브러리 상단의 통합 검색(js/main.js)이 담당한다.

@@ -111,7 +111,7 @@ function promptAuth() {
     loginTab.addEventListener("click", () => selectTab("login"));
     signupTab.addEventListener("click", () => selectTab("signup"));
     guestTab.addEventListener("click", () => selectTab("guest"));
-    requestAnimationFrame(() => selectTab("login"));
+    requestAnimationFrame(() => selectTab("guest"));
 
     loginButton.addEventListener("click", async () => {
       const email = validateEmail(loginEmail.value);

@@ -46,12 +46,12 @@
       </div>
       <div class="dlg-body">
         <div class="tabs" role="tablist">
-          <button id="auth-tab-login" class="tab" type="button" role="tab" aria-selected="true">로그인</button>
+          <button id="auth-tab-guest" class="tab" type="button" role="tab" aria-selected="true">게스트</button>
+          <button id="auth-tab-login" class="tab" type="button" role="tab" aria-selected="false">로그인</button>
           <button id="auth-tab-signup" class="tab" type="button" role="tab" aria-selected="false">회원가입</button>
-          <button id="auth-tab-guest" class="tab" type="button" role="tab" aria-selected="false">게스트</button>
         </div>
 
-        <div id="auth-panel-login" class="tabpane" role="tabpanel">
+        <div id="auth-panel-login" class="tabpane hidden" role="tabpanel">
           <h2 id="nickname-title">전원을 켜고 들어오세요</h2>
           <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
           <label class="lab" for="login-email-input">이메일</label>
@@ -73,7 +73,7 @@
           <button id="signup-submit" class="key key-on" type="button">가입하고 입장하기</button>
         </div>
 
-        <div id="auth-panel-guest" class="tabpane hidden" role="tabpanel">
+        <div id="auth-panel-guest" class="tabpane" role="tabpanel">
           <h2>가입 없이 듣기만 할래요</h2>
           <p class="sub">닉네임만 정하면 바로 들어옵니다.</p>
           <label class="lab" for="guest-nickname-input">닉네임</label>
@@ -149,6 +149,30 @@
       <div class="dlg-foot">
         <button id="save-track-cancel" class="key" type="button">취소</button>
         <button id="save-track-submit" class="key key-on" type="button">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="move-track-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="move-track-title">
+    <div class="dlg">
+      <div class="titlebar">
+        <span class="star" aria-hidden="true">★</span>
+        <span class="title-txt">다른 재생목록으로</span>
+        <span class="title-sp"></span>
+        <span class="tbtn x" aria-hidden="true">✕</span>
+      </div>
+      <div class="dlg-body">
+        <h2 id="move-track-title">어느 재생목록으로 보낼까요?</h2>
+        <p class="sub" id="move-track-name">—</p>
+        <div class="pbody">
+          <ul id="move-track-options" class="save-options" role="radiogroup" aria-label="보낼 재생목록"></ul>
+        </div>
+        <p id="move-track-status" class="note" role="status" aria-live="polite"></p>
+      </div>
+      <div class="dlg-foot">
+        <button id="move-track-cancel" class="key" type="button">취소</button>
+        <button id="move-track-copy" class="key" type="button">복사</button>
+        <button id="move-track-submit" class="key key-on" type="button">이동</button>
       </div>
     </div>
   </div>

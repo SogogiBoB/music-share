@@ -106,7 +106,8 @@ export async function removeTrackFromPlaylist(trackId) {
   if (error) throw error;
 }
 
-export async function moveTrackToPlaylist({ trackId, targetPlaylistId }) {
+// 곡 한 줄을 다른 재생목록으로 넣는다. 이동·복사가 공유하는 부분.
+async function insertTrackIntoPlaylist({ trackId, targetPlaylistId }) {
   const { data: track, error: fetchError } = await supabase
     .from("playlist_tracks")
     .select()
@@ -126,9 +127,17 @@ export async function moveTrackToPlaylist({ trackId, targetPlaylistId }) {
     position: targetTracks.length,
   });
   if (insertError) throw insertError;
+}
+
+export async function moveTrackToPlaylist({ trackId, targetPlaylistId }) {
+  await insertTrackIntoPlaylist({ trackId, targetPlaylistId });
 
   const { error: deleteError } = await supabase.from("playlist_tracks").delete().eq("id", trackId);
   if (deleteError) throw deleteError;
+}
+
+export async function copyTrackToPlaylist({ trackId, targetPlaylistId }) {
+  await insertTrackIntoPlaylist({ trackId, targetPlaylistId });
 }
 
 export async function persistReorder(reorderedTracks) {
