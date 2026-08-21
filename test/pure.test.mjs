@@ -694,3 +694,71 @@ test("방 안내 문구는 방장 여부와 게스트 여부에 따라 달라진
   assert.match(roles.getRoomStatusText({ amDj: false, isGuest: true }), /게스트/);
   assert.match(roles.getRoomStatusText({ amDj: false, isGuest: false }), /방장/);
 });
+
+// ── 반복 재생 시 자동 재시작 ──────────────────────────────────
+// 한곡 반복(또는 트랙 1개짜리 전체 반복)에서 곡이 끝나면 DJ 는 같은 트랙을
+// position_at_start=0 으로 다시 쓴다. 이때 old/new 의 current_track_id·is_playing·
+// position_at_start 가 전부 같아서 DB 트리거가 server_started_at 을 재각인하지 않으면
+// expected 위치가 곡 길이를 넘어버리고, computeSeekTarget 이 null 을 돌려주면서
+// 아무도 0초로 되감지 않아 재생이 재개되지 않는다.
+const { buildSetTrackUpdate, shouldSeekToTarget } = player;
+
+test("buildSetTrackUpdate: 같은 트랙을 다시 시작해도 restart_token 이 매번 달라진다", () => {
+  const first = buildSetTrackUpdate(7);
+  const second = buildSetTrackUpdate(7);
+
+  assert.equal(first.current_track_id, 7);
+  assert.equal(first.is_playing, true);
+  assert.equal(first.position_at_start, 0);
+  assert.ok(first.restart_token);
+  assert.notEqual(first.restart_token, second.restart_token);
+});
+
+test("shouldSeekToTarget: 곡이 끝난(ENDED) 플레이어도 0초로 되감아야 한다", () => {
+  assert.equal(shouldSeekToTarget({
+    target: 0, actual: 186, playerState: 0, timeSinceLoadMs: 190_000,
+  }), true);
+});
+
+test("shouldSeekToTarget: seek 대상이 없거나(null) 오차가 작으면 되감지 않는다", () => {
+  assert.equal(shouldSeekToTarget({
+    target: null, actual: 186, playerState: 0, timeSinceLoadMs: 190_000,
+  }), false);
+  assert.equal(shouldSeekToTarget({
+    target: 90, actual: 90.4, playerState: 1, timeSinceLoadMs: 190_000,
+  }), false);
+});
+
+test("shouldSeekToTarget: 로드 직후 3.5초 이내에는 버퍼링 중이므로 되감지 않는다", () => {
+  assert.equal(shouldSeekToTarget({
+    target: 90, actual: 2, playerState: 1, timeSinceLoadMs: 1_000,
+  }), false);
+});
+
+test("shouldSeekToTarget: 버퍼링/미시작(CUED) 상태에서는 되감지 않는다", () => {
+  assert.equal(shouldSeekToTarget({
+    target: 90, actual: 0, playerState: 3, timeSinceLoadMs: 190_000,
+  }), false);
+  assert.equal(shouldSeekToTarget({
+    target: 90, actual: 0, playerState: 5, timeSinceLoadMs: 190_000,
+  }), false);
+});
+
+test("한곡 반복: server_started_at 이 재각인되면 되감기 대상이 0초로 나온다", () => {
+  const duration = 186;
+  const restartedAt = "2026-08-22T01:00:00.000Z";
+  const nowAtRestart = new Date(restartedAt).getTime() + 200;
+
+  const expected = player.computeExpectedPosition({
+    isPlaying: true,
+    positionAtStart: 0,
+    serverStartedAt: restartedAt,
+    nowMs: nowAtRestart,
+  });
+  const target = computeSeekTarget({ expected, duration });
+
+  assert.ok(target !== null && target < 1);
+  assert.equal(shouldSeekToTarget({
+    target, actual: duration, playerState: 0, timeSinceLoadMs: duration * 1000,
+  }), true);
+});

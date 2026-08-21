@@ -330,7 +330,10 @@ create table public.playback_state (
   current_track_id bigint references public.tracks(id) on delete set null,
   is_playing boolean not null default false,
   position_at_start numeric not null default 0,
-  server_started_at timestamptz not null default now()
+  server_started_at timestamptz not null default now(),
+  -- 같은 트랙을 같은 위치로 다시 시작할 때 "의도된 재시작"임을 알리는 값.
+  -- 값이 바뀌면 아래 트리거가 server_started_at 을 재각인한다.
+  restart_token text
 );
 
 alter table public.playback_state enable row level security;
@@ -347,6 +350,8 @@ create policy "방장만 재생상태 변경" on public.playback_state
 -- 재생을 시작/재개할 때는 항상 DB 서버 시각으로 강제 고정한다.
 -- 단, 이미 재생 중인 상태에서 불필요한 UPDATE 로 인해 server_started_at 이 갱신되어
 -- 재생 중인 음악이 0초로 리셋되는 버그를 방지하기 위해 변경 조건이 충족될 때만 갱신한다.
+-- 한곡 반복처럼 같은 트랙을 같은 위치(0초)로 다시 시작하는 경우는 값이 전혀 바뀌지 않아
+-- 구분할 수 없으므로, 클라이언트가 보내는 restart_token 변경을 재시작 신호로 함께 본다.
 create or replace function public.stamp_server_started_at()
 returns trigger
 language plpgsql
@@ -355,7 +360,8 @@ begin
   if new.is_playing and (
     old.is_playing is distinct from true or
     old.current_track_id is distinct from new.current_track_id or
-    old.position_at_start is distinct from new.position_at_start
+    old.position_at_start is distinct from new.position_at_start or
+    old.restart_token is distinct from new.restart_token
   ) then
     new.server_started_at := now();
   end if;

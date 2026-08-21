@@ -663,8 +663,9 @@ async function bootstrap() {
   updateRepeatButtonUI();
 
   setPlayerStateChangeHandler(async (event) => {
-    if (event.data === 0) { // YT.PlayerState.ENDED
-      if (!amDj) return;
+    if (event.data !== 0) return; // YT.PlayerState.ENDED
+    if (!amDj) return;
+    try {
       const state = await fetchPlaybackState(roomId);
       const nextAction = computeNextTrackOnEnded({
         tracks: currentTracks,
@@ -672,11 +673,16 @@ async function bootstrap() {
         repeatMode,
       });
       if (nextAction.action === "play") {
-        await djSetTrack(roomId, nextAction.trackId);
+        // 갱신된 행을 즉시 적용한다. realtime echo 만 기다리면 이벤트가 유실되거나
+        // 늦을 때(웹소켓 재연결, 백그라운드 탭 스로틀링) 다음 곡이 시작되지 않는다.
+        const nextState = await djSetTrack(roomId, nextAction.trackId);
+        if (nextState) await applyState(nextState);
       } else if (nextAction.action === "stop") {
         const duration = event.target?.getDuration?.() ?? 0;
         await djPause(roomId, duration);
       }
+    } catch (err) {
+      console.error("곡 종료 처리 실패", err);
     }
   });
 
@@ -817,7 +823,7 @@ async function bootstrap() {
         updatePlaybackToggle(true);
       } else if (decision.action === "restart") {
         if (decision.isPlaying) {
-          await djPlay(roomId, 0);
+          await djPlay(roomId, 0, { restart: true });
           updatePlaybackToggle(true);
         } else {
           await djPause(roomId, 0);

@@ -35,6 +35,40 @@ export function computeSeekTarget({ expected, duration }) {
   return pos;
 }
 
+// 곡이 끝난(ENDED) 플레이어도 되감기 대상이다. 한곡 반복은 영상을 다시 로드하지 않고
+// 같은 영상을 0초로 되감아 재생하므로, ENDED 를 제외하면 반복 재생이 재개되지 않는다.
+// BUFFERING(3)·CUED(5) 는 아직 위치가 확정되지 않은 단계라 되감지 않는다.
+const SEEKABLE_PLAYER_STATES = new Set([0, 1, 2]); // ENDED, PLAYING, PAUSED
+
+export function shouldSeekToTarget({ target, actual, playerState, timeSinceLoadMs }) {
+  if (target === null || target === undefined) return false;
+  if (!SEEKABLE_PLAYER_STATES.has(playerState)) return false;
+  // 로드 직후에는 버퍼링 중일 수 있어 불필요한 seek 이 재생을 되감아버린다.
+  if (!(timeSinceLoadMs > 3500)) return false;
+  return Math.abs(Number(target) - Number(actual)) > 1.5;
+}
+
+// 같은 트랙을 같은 위치(0초)로 다시 시작하면 UPDATE 전후 값이 완전히 같아진다.
+// 그러면 DB 트리거 stamp_server_started_at 이 "값이 안 바뀐 UPDATE" 로 보고
+// server_started_at 을 재각인하지 않아, 모든 클라이언트가 이미 곡이 끝난 시각을
+// 기준으로 위치를 계산하게 된다(= 반복 재생이 재개되지 않는다).
+// 매번 달라지는 restart_token 을 실어 "의도된 재시작"임을 DB 에 알린다.
+export function generateRestartToken() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function buildSetTrackUpdate(trackId, { token = generateRestartToken() } = {}) {
+  return {
+    current_track_id: trackId,
+    is_playing: true,
+    position_at_start: 0,
+    restart_token: token,
+  };
+}
+
 export function formatClock(seconds) {
   const total = Math.floor(Number(seconds));
   if (!Number.isFinite(total) || total < 0) return "00:00";
@@ -308,20 +342,24 @@ export async function fetchPlaybackState(roomId) {
 // server_started_at 은 클라이언트가 보내지 않는다. DB 트리거(stamp_server_started_at)가
 // is_playing=true 로 바뀔 때마다 서버 시각으로 강제 고정해, DJ 클라이언트 시계 오차가
 // 재생 위치 오차로 이어지지 않게 한다.
+// 갱신된 행을 그대로 돌려준다. 호출부가 realtime echo 를 기다리지 않고 즉시 적용할 수
+// 있어야, postgres_changes 이벤트가 유실되거나 늦어도 재생이 멈추지 않는다.
 export async function djSetTrack(roomId, trackId) {
-  const { error } = await supabase.from("playback_state").update({
-    current_track_id: trackId,
-    is_playing: true,
-    position_at_start: 0,
-  }).eq("room_id", roomId);
+  const { data, error } = await supabase.from("playback_state")
+    .update(buildSetTrackUpdate(trackId))
+    .eq("room_id", roomId)
+    .select()
+    .single();
   if (error) throw error;
+  return data;
 }
 
-export async function djPlay(roomId, currentPosition) {
-  const { error } = await supabase.from("playback_state").update({
-    is_playing: true,
-    position_at_start: currentPosition,
-  }).eq("room_id", roomId);
+// restart:true 는 "이미 재생 중인 곡을 같은 위치에서 다시 시작" 을 뜻한다. 값이 하나도
+// 바뀌지 않는 UPDATE 가 되므로 restart_token 없이는 server_started_at 이 재각인되지 않는다.
+export async function djPlay(roomId, currentPosition, { restart = false } = {}) {
+  const update = { is_playing: true, position_at_start: currentPosition };
+  if (restart) update.restart_token = generateRestartToken();
+  const { error } = await supabase.from("playback_state").update(update).eq("room_id", roomId);
   if (error) throw error;
 }
 
@@ -380,11 +418,7 @@ export async function applyPlaybackState(state, tracks) {
     const timeSinceLoad = Date.now() - lastVideoLoadedAtMs;
     const target = computeSeekTarget({ expected, duration: player.getDuration?.() ?? 0 });
 
-    // 로드 직후 3.5초 이내에는 버퍼링 중일 수 있으므로 불필요한 seekTo 로 인해
-    // 노래가 2~4초 시점에 0초나 이전 지점으로 되감기는 현상을 방지한다.
-    // target === null 은 이미 곡이 끝난 지점이라는 뜻이므로 seek 하지 않는다.
-    if (target !== null && timeSinceLoad > 3500
-        && (playerState === 1 || playerState === 2) && Math.abs(target - actual) > 1.5) {
+    if (shouldSeekToTarget({ target, actual, playerState, timeSinceLoadMs: timeSinceLoad })) {
       player.seekTo(target, true);
     }
   }
