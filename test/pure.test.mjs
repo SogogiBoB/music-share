@@ -8,6 +8,7 @@ import * as roles from "../js/roles.js";
 import { hasDuplicateTrack, computeReorderedPositions, filterPlaylistsByQuery } from "../js/playlists.js";
 import * as playlists from "../js/playlists.js";
 import { parseYoutubeSearchResults } from "../js/youtubeSearch.js";
+import * as rooms from "../js/rooms.js";
 
 test("스캐폴드 확인", () => {
   assert.equal(1 + 1, 2);
@@ -143,39 +144,8 @@ test("YouTube API가 로딩 중이면 YT.ready 신호에서 플레이어 초기�
   assert.equal(initialized, 1);
 });
 
-test("DJ가 비어 있을 때만 리스너에게 DJ 되기 권한을 준다", () => {
-  assert.equal(typeof roles.canClaimDj, "function");
-  assert.equal(roles.canClaimDj({ dj_uid: null }, "listener-uid"), true);
-  const activeLease = { dj_uid: "dj-uid", dj_lease_expires_at: "2099-01-01T00:00:00.000Z" };
-  assert.equal(roles.canClaimDj(activeLease, "listener-uid"), false);
-  assert.equal(roles.canClaimDj(activeLease, "dj-uid"), false);
-});
 
-test("만료된 DJ 임대는 리스너가 회수할 수 있다", () => {
-  const now = Date.parse("2026-08-19T00:00:30.000Z");
-  assert.equal(typeof roles.isDjLeaseExpired, "function");
-  assert.equal(roles.isDjLeaseExpired({
-    dj_uid: "previous-dj",
-    dj_lease_expires_at: "2026-08-19T00:00:00.000Z",
-  }, now), true);
-  assert.equal(roles.canClaimDj({
-    dj_uid: "previous-dj",
-    dj_lease_expires_at: "2026-08-19T00:01:00.000Z",
-  }, "listener-uid", now), false);
-  assert.equal(roles.canClaimDj({
-    dj_uid: "previous-dj",
-    dj_lease_expires_at: "2026-08-19T00:00:00.000Z",
-  }, "listener-uid", now), true);
-});
 
-test("DJ를 빼앗긴 기존 DJ에게만 역할 전환 알림을 보낸다", () => {
-  assert.equal(typeof roles.shouldNotifyDjTakeover, "function");
-  const before = { dj_uid: "previous-dj" };
-  const after = { dj_uid: "new-dj" };
-  assert.equal(roles.shouldNotifyDjTakeover(before, after, "previous-dj"), true);
-  assert.equal(roles.shouldNotifyDjTakeover(before, after, "listener"), false);
-  assert.equal(roles.shouldNotifyDjTakeover(before, { dj_uid: "previous-dj" }, "previous-dj"), false);
-});
 
 test("재생 상태에 맞춰 중앙 제어 버튼의 아이콘과 레이블을 만든다", () => {
   assert.equal(typeof player.getPlaybackTogglePresentation, "function");
@@ -189,17 +159,6 @@ test("재생 상태에 맞춰 중앙 제어 버튼의 아이콘과 레이블을 
   });
 });
 
-test("DJ 권한을 얻으면 새로고침 없이 DJ UI 상태로 전환할 수 있다", () => {
-  assert.equal(typeof roles.getDjRoleViewState, "function");
-  assert.deepEqual(roles.getDjRoleViewState({ dj_uid: "other-dj" }, "me"), {
-    amDj: false,
-    showClaimButton: true,
-  });
-  assert.deepEqual(roles.getDjRoleViewState({ dj_uid: "me" }, "me"), {
-    amDj: true,
-    showClaimButton: false,
-  });
-});
 
 test("재생목록에 같은 유튜브 곡이 있으면 중복으로 판단", () => {
   const tracks = [{ youtube_id: "abc" }, { youtube_id: "def" }];
@@ -254,38 +213,10 @@ test("게스트 입장은 닉네임만 있으면 통과한다", () => {
   assert.equal(result.message, "");
 });
 
-test("DJ는 대기열·트랜스포트·라이브러리 탭을 모두 본다", () => {
-  const view = roles.getRoomViewState({ settingsRow: { dj_uid: "u1" }, uid: "u1", isGuest: false });
-  assert.deepEqual(view, {
-    amDj: true, isGuest: false, showClaimButton: false,
-    showQueuePanel: true, showTransport: true, showLibraryTab: true, canDelegate: true,
-  });
-});
 
-test("회원 리스너는 대기열·트랜스포트를 못 보지만 DJ 되기와 라이브러리는 본다", () => {
-  const view = roles.getRoomViewState({ settingsRow: { dj_uid: "u1" }, uid: "u2", isGuest: false });
-  assert.equal(view.showQueuePanel, false);
-  assert.equal(view.showTransport, false);
-  assert.equal(view.showClaimButton, true);
-  assert.equal(view.showLibraryTab, true);
-});
 
-test("게스트는 DJ 되기 버튼도 라이브러리 탭도 못 본다", () => {
-  const view = roles.getRoomViewState({ settingsRow: { dj_uid: "u1" }, uid: "u3", isGuest: true });
-  assert.equal(view.showClaimButton, false);
-  assert.equal(view.showLibraryTab, false);
-  assert.equal(view.canDelegate, false);
-});
 
-test("게스트는 DJ가 비어 있어도 DJ 되기 버튼을 못 본다", () => {
-  const view = roles.getRoomViewState({ settingsRow: { dj_uid: null }, uid: "u3", isGuest: true });
-  assert.equal(view.showClaimButton, false);
-});
 
-test("게스트에게는 DJ를 위임할 수 없다", () => {
-  assert.equal(roles.canDelegateTo({ uid: "u3", is_guest: true }), false);
-  assert.equal(roles.canDelegateTo({ uid: "u2", is_guest: false }), true);
-});
 
 import { computeOutputVolume, clampVolume } from "../js/volume.js";
 
@@ -681,4 +612,85 @@ test("parseYoutubeSearchResults: 검색 결과 제목의 엔티티를 풀어서 
   assert.deepEqual(parseYoutubeSearchResults(apiJson), [
     { videoId: "abc123", title: "Tom & Jerry 'OST'" },
   ]);
+});
+
+// ── 방(room) 구조 ────────────────────────────────────────────
+test("방 이름은 공백만 있으면 거부하고 앞뒤 공백을 제거한다", () => {
+  assert.equal(rooms.validateRoomName("   ").message !== "", true);
+  assert.deepEqual(rooms.validateRoomName("  재즈의 밤  ").value, "재즈의 밤");
+  assert.equal(rooms.validateRoomName("재즈의 밤").message, "");
+});
+
+test("방 이름은 30자를 넘기면 거부한다", () => {
+  assert.equal(rooms.validateRoomName("가".repeat(30)).message, "");
+  assert.notEqual(rooms.validateRoomName("가".repeat(31)).message, "");
+});
+
+test("방 비밀번호는 선택 사항이라 비어 있어도 통과하고 null 로 정규화된다", () => {
+  assert.deepEqual(rooms.normalizeRoomPassword(""), null);
+  assert.deepEqual(rooms.normalizeRoomPassword("   "), null);
+  assert.deepEqual(rooms.normalizeRoomPassword(undefined), null);
+  assert.deepEqual(rooms.normalizeRoomPassword("hunter2"), "hunter2");
+});
+
+test("게스트에게는 방 만들기 버튼을 감춘다", () => {
+  assert.equal(rooms.getRoomListViewState({ isGuest: false }).showCreateButton, true);
+  assert.equal(rooms.getRoomListViewState({ isGuest: true }).showCreateButton, false);
+});
+
+test("방 삭제 버튼은 내가 만든 방에만 보인다", () => {
+  assert.equal(rooms.canDeleteRoom({ owner_uid: "u1" }, "u1"), true);
+  assert.equal(rooms.canDeleteRoom({ owner_uid: "u1" }, "u2"), false);
+  assert.equal(rooms.canDeleteRoom(null, "u1"), false);
+});
+
+test("URL 해시에서 방 id 를 읽는다", () => {
+  assert.equal(rooms.parseRoomId({ hash: "#room=12" }), 12);
+  assert.equal(rooms.parseRoomId({ hash: "#room=abc" }), null);
+  assert.equal(rooms.parseRoomId({ hash: "" }), null);
+  assert.equal(rooms.parseRoomId({ hash: "#other=1" }), null);
+});
+
+// `npx serve` 같은 clean-URL 서버는 /index.html?room=1 을 /index 로 301 하면서
+// 쿼리스트링을 버린다. 해시는 서버로 가지 않아 살아남으므로 해시를 정본으로 쓰되,
+// 예전 형태의 링크도 계속 열리게 쿼리도 함께 읽는다.
+test("쿼리 형태 링크도 계속 읽고, 해시가 우선한다", () => {
+  assert.equal(rooms.parseRoomId({ search: "?room=7" }), 7);
+  assert.equal(rooms.parseRoomId({ search: "?room=7", hash: "#room=12" }), 12);
+  assert.equal(rooms.parseRoomId({}), null);
+});
+
+test("방 목록 한 줄에 방장 닉네임과 인원수를 함께 보여준다", () => {
+  assert.equal(
+    rooms.formatRoomMeta({ owner_nickname: "슈가", member_count: 3 }),
+    "방장 슈가 · 3명",
+  );
+  assert.equal(
+    rooms.formatRoomMeta({ owner_nickname: null, member_count: 0 }),
+    "방장 알 수 없음 · 0명",
+  );
+});
+
+test("방 화면 권한은 방장 여부로만 갈린다 (DJ 되기 없음)", () => {
+  const owner = roles.getRoomViewState({ room: { owner_uid: "u1" }, uid: "u1", isGuest: false });
+  assert.equal(owner.amDj, true);
+  assert.equal(owner.showQueuePanel, true);
+  assert.equal(owner.showTransport, true);
+  assert.equal(owner.showLibraryTab, true);
+
+  const listener = roles.getRoomViewState({ room: { owner_uid: "u1" }, uid: "u2", isGuest: false });
+  assert.equal(listener.amDj, false);
+  assert.equal(listener.showQueuePanel, false);
+  assert.equal(listener.showTransport, false);
+  assert.equal(listener.showLibraryTab, true);
+
+  const guest = roles.getRoomViewState({ room: { owner_uid: "u1" }, uid: "u3", isGuest: true });
+  assert.equal(guest.amDj, false);
+  assert.equal(guest.showLibraryTab, false);
+});
+
+test("방 안내 문구는 방장 여부와 게스트 여부에 따라 달라진다", () => {
+  assert.match(roles.getRoomStatusText({ amDj: true, isGuest: false }), /방장/);
+  assert.match(roles.getRoomStatusText({ amDj: false, isGuest: true }), /게스트/);
+  assert.match(roles.getRoomStatusText({ amDj: false, isGuest: false }), /방장/);
 });

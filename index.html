@@ -36,60 +36,6 @@
     <svg class="cl c7" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
   </div>
 
-  <div id="nickname-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title">
-    <div class="dlg dlg-wide">
-      <div class="titlebar">
-        <span class="star" aria-hidden="true">★</span>
-        <span class="title-txt">접속</span>
-        <span class="title-sp"></span>
-        <span class="tbtn x" aria-hidden="true">✕</span>
-      </div>
-      <div class="dlg-body">
-        <div class="tabs" role="tablist">
-          <button id="auth-tab-guest" class="tab" type="button" role="tab" aria-selected="true">게스트</button>
-          <button id="auth-tab-login" class="tab" type="button" role="tab" aria-selected="false">로그인</button>
-          <button id="auth-tab-signup" class="tab" type="button" role="tab" aria-selected="false">회원가입</button>
-        </div>
-
-        <div id="auth-panel-login" class="tabpane hidden" role="tabpanel">
-          <h2 id="nickname-title">전원을 켜고 들어오세요</h2>
-          <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
-          <label class="lab" for="login-email-input">이메일</label>
-          <input id="login-email-input" class="field field-block" type="email" autocomplete="email">
-          <label class="lab" for="login-password-input">비밀번호</label>
-          <input id="login-password-input" class="field field-block" type="password" autocomplete="current-password">
-          <p id="login-error" class="note err" role="alert"></p>
-          <button id="login-submit" class="key key-on" type="button">로그인</button>
-        </div>
-
-        <div id="auth-panel-signup" class="tabpane hidden" role="tabpanel">
-          <label class="lab" for="signup-email-input">이메일</label>
-          <input id="signup-email-input" class="field field-block" type="email" autocomplete="email">
-          <label class="lab" for="signup-nickname-input">닉네임</label>
-          <input id="signup-nickname-input" class="field field-block" type="text" maxlength="20" autocomplete="nickname">
-          <label class="lab" for="signup-password-input">비밀번호</label>
-          <input id="signup-password-input" class="field field-block" type="password" placeholder="6자 이상" autocomplete="new-password">
-          <p id="signup-error" class="note err" role="alert"></p>
-          <button id="signup-submit" class="key key-on" type="button">가입하고 입장하기</button>
-        </div>
-
-        <div id="auth-panel-guest" class="tabpane" role="tabpanel">
-          <h2>가입 없이 듣기만 할래요</h2>
-          <p class="sub">닉네임만 정하면 바로 들어옵니다.</p>
-          <label class="lab" for="guest-nickname-input">닉네임</label>
-          <input id="guest-nickname-input" class="field field-block" type="text" maxlength="20" autocomplete="nickname">
-          <ul class="limits">
-            <li>DJ가 될 수 없고, DJ 위임도 받지 않습니다</li>
-            <li>내 재생목록을 만들거나 볼 수 없습니다</li>
-            <li>듣기와 내 소리 크기 조절은 그대로 됩니다</li>
-          </ul>
-          <p id="guest-error" class="note err" role="alert"></p>
-          <button id="guest-submit" class="key key-on" type="button">게스트로 입장</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div id="listen-gate" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="listen-title">
     <div class="dlg">
       <div class="titlebar">
@@ -213,9 +159,10 @@
 
     <div class="starbar">
       <span class="pilot"><i></i> 방송 중</span>
-      <p id="dj-claim-status" class="room" role="status" aria-live="polite"></p>
+      <span id="room-name" class="room-title">—</span>
+      <p id="room-status" class="room" role="status" aria-live="polite"></p>
       <span class="sp"></span>
-      <button id="dj-claim-button" class="key key-on hidden" type="button">DJ 되기</button>
+      <button id="leave-room-button" class="key key-on" type="button">방 나가기</button>
       <button id="logout-button" class="key" type="button">로그아웃</button>
     </div>
 
@@ -354,6 +301,6 @@
     };
   </script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script type="module" src="js/main.js?v=20260821-y2k"></script>
+  <script type="module" src="js/main.js?v=20260821-rooms"></script>
 </body>
 </html>

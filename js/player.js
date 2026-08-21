@@ -298,8 +298,9 @@ export function getClockOffsetMs() {
   return clockOffsetMs;
 }
 
-export async function fetchPlaybackState() {
-  const { data, error } = await supabase.from("playback_state").select().eq("id", 1).single();
+export async function fetchPlaybackState(roomId) {
+  const { data, error } = await supabase
+    .from("playback_state").select().eq("room_id", roomId).single();
   if (error) throw error;
   return data;
 }
@@ -307,36 +308,38 @@ export async function fetchPlaybackState() {
 // server_started_at 은 클라이언트가 보내지 않는다. DB 트리거(stamp_server_started_at)가
 // is_playing=true 로 바뀔 때마다 서버 시각으로 강제 고정해, DJ 클라이언트 시계 오차가
 // 재생 위치 오차로 이어지지 않게 한다.
-export async function djSetTrack(trackId) {
+export async function djSetTrack(roomId, trackId) {
   const { error } = await supabase.from("playback_state").update({
     current_track_id: trackId,
     is_playing: true,
     position_at_start: 0,
-  }).eq("id", 1);
+  }).eq("room_id", roomId);
   if (error) throw error;
 }
 
-export async function djPlay(currentPosition) {
+export async function djPlay(roomId, currentPosition) {
   const { error } = await supabase.from("playback_state").update({
     is_playing: true,
     position_at_start: currentPosition,
-  }).eq("id", 1);
+  }).eq("room_id", roomId);
   if (error) throw error;
 }
 
-export async function djPause(currentPosition) {
+export async function djPause(roomId, currentPosition) {
   const { error } = await supabase.from("playback_state").update({
     is_playing: false,
     position_at_start: currentPosition,
-  }).eq("id", 1);
+  }).eq("room_id", roomId);
   if (error) throw error;
 }
 
-export function subscribePlaybackState(onChange) {
+export function subscribePlaybackState(roomId, onChange) {
   return supabase
-    .channel("playback-changes")
-    .on("postgres_changes", { event: "*", schema: "public", table: "playback_state" }, async () => {
-      onChange(await fetchPlaybackState());
+    .channel(`playback-changes-${roomId}`)
+    .on("postgres_changes", {
+      event: "*", schema: "public", table: "playback_state", filter: `room_id=eq.${roomId}`,
+    }, async () => {
+      onChange(await fetchPlaybackState(roomId));
     })
     .subscribe();
 }
@@ -393,7 +396,7 @@ export async function applyPlaybackState(state, tracks) {
 // 드리프트 보정은 RLS 로 보호되는 playback_state 를 주기적으로 폴링해서 수행한다.
 // Realtime Broadcast 채널은 인증이 없어 anon 키만 있으면 누구나 가짜 위치를 쏴서
 // 방 전체를 강제 seek 할 수 있으므로 사용하지 않는다.
-export function startDriftCorrection() {
+export function startDriftCorrection(roomId) {
   setInterval(async () => {
     const player = await playerReady;
     if (!player.getCurrentTime || !player.getPlayerState) return;
@@ -405,7 +408,7 @@ export function startDriftCorrection() {
 
     let state;
     try {
-      state = await fetchPlaybackState();
+      state = await fetchPlaybackState(roomId);
     } catch (e) {
       return;
     }

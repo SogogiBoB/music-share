@@ -41,30 +41,41 @@ export function deriveNickname({ storedNickname, isAnonymous } = {}) {
   return isAnonymous ? GUEST_PLACEHOLDER : MEMBER_PLACEHOLDER;
 }
 
-export async function ensureIdentity() {
+// 세션만 확인한다(로그인 모달을 띄우지 않는다). 세션이 없으면 null.
+// 방 화면(index.html)은 세션이 없으면 방 목록 페이지로 돌려보내야 하므로 이쪽을 쓴다.
+export async function getSessionIdentity() {
   const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    const uid = session.user.id;
-    const isAnonymous = session.user.is_anonymous === true || !session.user.email;
-    const { data: profile } = await supabase.from("profiles").select().eq("uid", uid).single();
-    setNicknameModalVisibility(document.getElementById("nickname-modal"), false);
+  if (!session?.user) return null;
 
-    const nickname = deriveNickname({
-      storedNickname: profile?.nickname,
-      isAnonymous,
-    });
-    const isGuest = profile?.is_guest ?? isAnonymous;
+  const uid = session.user.id;
+  const isAnonymous = session.user.is_anonymous === true || !session.user.email;
+  const { data: profile } = await supabase.from("profiles").select().eq("uid", uid).single();
 
-    // 매 로드마다 무조건 쓰면 자리표시자가 실제 닉네임을 지운다. 값이 달라질 때만 쓴다.
-    // 기존 행을 갱신할 때는 is_guest 를 보내지 않는다("본인 프로필만 수정" 정책이
-    // is_guest 변경을 막고, 보내지 않으면 기존 값이 유지된다).
-    if (!profile) {
-      await supabase.from("profiles").insert({ uid, nickname, is_guest: isGuest });
-    } else if (profile.nickname !== nickname) {
-      await supabase.from("profiles").update({ nickname }).eq("uid", uid);
-    }
+  const nickname = deriveNickname({
+    storedNickname: profile?.nickname,
+    isAnonymous,
+  });
+  const isGuest = profile?.is_guest ?? isAnonymous;
 
-    return { uid, nickname, isGuest, fromPrompt: false };
+  // 매 로드마다 무조건 쓰면 자리표시자가 실제 닉네임을 지운다. 값이 달라질 때만 쓴다.
+  // 기존 행을 갱신할 때는 is_guest 를 보내지 않는다("본인 프로필만 수정" 정책이
+  // is_guest 변경을 막고, 보내지 않으면 기존 값이 유지된다).
+  if (!profile) {
+    await supabase.from("profiles").insert({ uid, nickname, is_guest: isGuest });
+  } else if (profile.nickname !== nickname) {
+    await supabase.from("profiles").update({ nickname }).eq("uid", uid);
+  }
+
+  return { uid, nickname, isGuest, fromPrompt: false };
+}
+
+// 방 목록 페이지 전용. 세션이 없으면 로그인/가입/게스트 모달로 신원을 만든다.
+export async function ensureIdentity() {
+  const existing = await getSessionIdentity();
+  if (existing) {
+    const modal = document.getElementById("nickname-modal");
+    if (modal) setNicknameModalVisibility(modal, false);
+    return existing;
   }
   const result = await promptAuth();
   return { isGuest: false, fromPrompt: true, ...result };
@@ -74,7 +85,7 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-function promptAuth() {
+export function promptAuth() {
   return new Promise((resolve) => {
     const modal = document.getElementById("nickname-modal");
     const loginTab = document.getElementById("auth-tab-login");

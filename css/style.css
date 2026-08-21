@@ -294,14 +294,25 @@ button{font-family:inherit}
 button.tt{border:0; background:transparent; cursor:pointer; padding:0}
 button.tt:hover{text-decoration:underline}
 button.tt:focus-visible{outline:1px dotted currentColor}
-.strip .key.to-lib,.strip .key.to-room{padding:2px 7px; font-size:11px}
-.strip .cue{padding:2px 8px; border:0; cursor:pointer; background:var(--chrome); box-shadow:var(--out);
-  font:500 11px var(--kr); color:var(--ink)}
+/* 트랙 행 버튼(대기열·라이브러리)은 글자 대신 아이콘. 너비가 제목에서 뺏기지 않게 정사각형으로 고정한다. */
+.strip .key.to-lib,.strip .key.to-room,.strip .key.move,.strip .cue{flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  width:22px; height:19px; padding:0}
+.strip .cue{border:0; cursor:pointer; background:var(--chrome); box-shadow:var(--out); color:var(--ink)}
 .strip .cue:active:not(:disabled){box-shadow:var(--in)}
+.strip .key.to-lib .ico,.strip .key.to-room .ico,.strip .key.move .ico,.strip .cue .ico{width:14px; height:14px}
+.ico-fill{fill:currentColor; stroke:none}
+.strip .cue.is-live{color:var(--candy-dk)}
+/* 재생 중 표시는 정지된 아이콘보다 막대가 움직이는 편이 한눈에 들어온다. */
+.strip .cue .eq rect{transform-box:fill-box; transform-origin:50% 100%; animation:eqbar .9s steps(3,end) infinite}
+.strip .cue .eq .eq2{animation-delay:.3s}
+.strip .cue .eq .eq3{animation-delay:.6s}
+@keyframes eqbar{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){
+  .strip .cue .eq rect{animation:none}
+}
 .strip .rm{flex:0 0 auto; width:20px; height:19px; border:0; cursor:pointer; background:var(--chrome); box-shadow:var(--out);
   font:700 11px var(--kr); color:#b0231a}
 .strip .rm:active:not(:disabled){box-shadow:var(--in)}
-.strip .move{flex:0 0 auto; padding:2px 7px; font:400 11px var(--kr)}
 .empty-state{display:flex; flex-direction:column; align-items:center; gap:5px; padding:22px 12px;
   text-align:center; color:var(--ink-2)}
 .empty-state strong{color:var(--ink)}
@@ -410,4 +421,33 @@ button.tt:focus-visible{outline:1px dotted currentColor}
 @media (prefers-reduced-motion:reduce){
   .cl,.pilot i,#now-title.is-marquee.is-playing .marq,.vu.is-playing::after{animation:none}
   .vu.is-playing::after{width:34%}
+}
+
+/* ---- 방 목록 화면 (rooms.html) ---- */
+.body-rooms{grid-template-columns:minmax(0,1fr)}
+#rooms-section{max-width:560px; width:100%; margin:0 auto}
+.rooms-body{max-height:min(62vh,460px); overflow:auto}
+.rooms{display:flex; flex-direction:column; gap:3px}
+.room-row{display:flex; align-items:center; gap:6px; padding:5px 6px;
+  background:linear-gradient(180deg,#fbfeff,#eaf6fd); box-shadow:inset -1px -1px 0 var(--chrome-dk),inset 1px 1px 0 #fff}
+.room-row:hover{background:linear-gradient(180deg,#fff,#dcf0fc)}
+.room-info{flex:1; min-width:0}
+.room-name{display:flex; align-items:center; gap:5px; min-width:0}
+.room-name .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:700}
+.room-lock{flex:0 0 auto; display:inline-flex; color:var(--candy-dk)}
+.room-lock .ico{width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round}
+.room-meta{margin:1px 0 0; font-size:11px; color:var(--ink-2)}
+.room-empty{padding:18px 6px; text-align:center; font-size:12px; color:var(--ink-2)}
+.rooms-foot{padding:0 3px 3px}
+.rooms-foot .new-pl{width:100%}
+.room-title{font-family:var(--px); font-size:11px; color:var(--sky-dk);
+  max-width:32vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.lbl{display:block; margin:0 0 3px; font-size:11px; font-weight:700; color:var(--ink-2)}
+.lbl .opt{font-weight:400; color:#8a867e}
+
+@media (max-width:520px){
+  .room-row{flex-wrap:wrap}
+  .room-info{flex:1 1 100%}
+  .room-title{max-width:24vw}
 }

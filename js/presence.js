@@ -1,7 +1,7 @@
 import { supabase } from "./supabaseClient.js";
 
-export function initPresence({ uid, nickname, getVolume, onSync }) {
-  const channel = supabase.channel("room-presence", {
+export function initPresence({ roomId, uid, nickname, getVolume, onSync }) {
+  const channel = supabase.channel(`room-presence-${roomId}`, {
     config: { presence: { key: uid } },
   });
 

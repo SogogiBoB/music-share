@@ -1,10 +1,9 @@
-import { ensureIdentity, signOut } from "./auth.js";
+import { getSessionIdentity, signOut } from "./auth.js";
 import { initPlaylistUI } from "./playlistUI.js";
+import { fetchProfiles, isRoomOwner, getRoomViewState, getRoomStatusText } from "./roles.js";
 import {
-  takeOverDj, fetchSettings, isCurrentDj,
-  releaseDj, heartbeatDj, fetchProfiles, subscribeSettings, isDjLeaseExpired, shouldNotifyDjTakeover,
-  getRoomViewState,
-} from "./roles.js";
+  parseRoomId, joinRoom, leaveRoom, fetchRoom, subscribeRoom,
+} from "./rooms.js";
 import { initPresence } from "./presence.js";
 import { fetchTracks, subscribeTracks, deleteTrack, addTrackFromLibrary } from "./playlist.js";
 import { searchUnified } from "./youtubeSearch.js";
@@ -23,6 +22,16 @@ import { computeOutputVolume, clampVolume, loadMyVolume, saveMyVolume, setMaster
 // 목록에 담기 아이콘. 검색 결과 오른쪽의 "내 재생목록에 추가" 버튼에 쓴다.
 const ICON_LIST_ADD = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
   <path d="M4 7h12M4 12h9M4 17h7"/><path d="M17.5 13v7M14 16.5h7"/>
+</svg>`;
+
+// 대기열 행의 재생 버튼. 재생 중인 곡은 삼각형 대신 움직이는 이퀄라이저 막대로 구분한다.
+const ICON_CUE_PLAY = `<svg class="ico ico-fill" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M8 5.5 18 12 8 18.5z"/>
+</svg>`;
+const ICON_CUE_LIVE = `<svg class="ico ico-fill eq" viewBox="0 0 24 24" aria-hidden="true">
+  <rect class="eq1" x="4.5" y="9" width="3.2" height="6" rx="1"/>
+  <rect class="eq2" x="10.4" y="6" width="3.2" height="12" rx="1"/>
+  <rect class="eq3" x="16.3" y="10.5" width="3.2" height="3" rx="1"/>
 </svg>`;
 
 // 곡 제목이 화면 폭보다 길면 재생 중에만 왼쪽으로 흘려서 뒷부분까지 보여준다.
@@ -108,7 +117,7 @@ function renderPresence(users, profiles) {
   }
 }
 
-function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
+function renderTracks({ tracks, roomId, amDj, currentTrackId, saveToPlaylist = null }) {
   const list = document.getElementById("track-list");
   const queueCount = document.getElementById("queue-count");
   if (queueCount) queueCount.textContent = String(tracks.length).padStart(2, "0");
@@ -147,7 +156,7 @@ function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
       row.addEventListener("click", async () => {
         row.disabled = true;
         try {
-          await djSetTrack(t.id);
+          await djSetTrack(roomId, t.id);
         } catch (err) {
           console.error(err);
           alert("곡을 재생하지 못했습니다. 잠시 후 다시 시도해 주세요.");
@@ -164,8 +173,9 @@ function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
     if (saveToPlaylist?.showButton) {
       const toLib = document.createElement("button");
       toLib.type = "button";
-      toLib.className = "key to-lib";
-      toLib.textContent = "플리로";
+      toLib.className = "key to-lib icon-key";
+      toLib.title = "내 재생목록에 저장";
+      toLib.innerHTML = ICON_LIST_ADD;
       toLib.setAttribute("aria-label", `${t.title} 내 재생목록에 저장`);
       toLib.addEventListener("click", (event) => {
         event.stopPropagation();
@@ -177,14 +187,15 @@ function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
     if (amDj) {
       const cue = document.createElement("button");
       cue.type = "button";
-      cue.className = "cue";
-      cue.setAttribute("aria-label", `${t.title} 재생`);
-      cue.textContent = isLive ? "재생 중" : "재생";
+      cue.className = isLive ? "cue is-live" : "cue";
+      cue.setAttribute("aria-label", `${t.title} ${isLive ? "재생 중" : "재생"}`);
+      cue.title = isLive ? "재생 중" : "재생";
+      cue.innerHTML = isLive ? ICON_CUE_LIVE : ICON_CUE_PLAY;
       cue.addEventListener("click", async (event) => {
         event.stopPropagation();
         cue.disabled = true;
         try {
-          await djSetTrack(t.id);
+          await djSetTrack(roomId, t.id);
         } catch (err) {
           console.error(err);
           alert("곡을 재생하지 못했습니다. 잠시 후 다시 시도해 주세요.");
@@ -218,14 +229,12 @@ function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
   });
 }
 
-function renderRoomAccess(settings, identity) {
-  const view = getRoomViewState({ settingsRow: settings, uid: identity.uid, isGuest: identity.isGuest });
-  const button = document.getElementById("dj-claim-button");
-  const status = document.getElementById("dj-claim-status");
-  const leaseExpired = isDjLeaseExpired(settings);
+function renderRoomAccess(room, identity) {
+  const view = getRoomViewState({ room, uid: identity.uid, isGuest: identity.isGuest });
+  const status = document.getElementById("room-status");
+  const roomName = document.getElementById("room-name");
 
-  button.classList.toggle("hidden", !view.showClaimButton);
-  button.disabled = false;
+  if (roomName) roomName.textContent = room?.name ?? "—";
   document.getElementById("playlist-section").classList.toggle("hidden", !view.showQueuePanel);
   document.getElementById("controls-section").classList.toggle("hidden", !view.showTransport);
   // 라이브러리는 이제 탭이 아니라 방 화면 오른쪽 컬럼이다. 게스트에게는 컬럼째 감추고
@@ -234,9 +243,7 @@ function renderRoomAccess(settings, identity) {
   document.getElementById("room-view").classList.toggle("is-solo", !view.showLibraryTab);
   document.getElementById("listener-note").classList.toggle("hidden", view.amDj);
 
-  status.textContent = view.amDj ? "현재 DJ입니다"
-    : view.isGuest ? "게스트로 듣는 중이에요"
-    : (leaseExpired ? "이전 DJ 연결이 끊겼어요" : "DJ가 음악을 고르고 있어요");
+  status.textContent = getRoomStatusText(view);
 
   return view;
 }
@@ -258,31 +265,37 @@ function updatePlaybackToggle(isPlaying) {
   }
 }
 
-function startDjHeartbeat() {
-  const heartbeat = async () => {
-    try {
-      const retained = await heartbeatDj();
-      if (!retained) location.reload();
-    } catch (err) {
-      console.error("DJ heartbeat failed", err);
-    }
-  };
-  window.setInterval(heartbeat, 15_000);
-}
-
 async function loadProfiles() {
   const profiles = await fetchProfiles();
   return Object.fromEntries(profiles.map((p) => [p.uid, p]));
 }
 
 async function bootstrap() {
-  const identity = await ensureIdentity();
-  let settings = await fetchSettings();
-  let amDj = isCurrentDj(settings, identity.uid);
-  let currentView = renderRoomAccess(settings, identity);
+  // 방 화면은 방 목록에서만 들어온다. 방 id 나 세션이 없으면 목록으로 돌려보낸다.
+  const roomId = parseRoomId(location);
+  if (!roomId) {
+    location.replace("rooms.html");
+    return;
+  }
+  const identity = await getSessionIdentity();
+  if (!identity) {
+    location.replace("rooms.html");
+    return;
+  }
+  // 비밀번호 방은 목록 화면에서 이미 검증을 통과해 멤버가 되어 있다.
+  // URL 을 직접 친 경우처럼 멤버가 아니면 여기서 막고 목록으로 보낸다.
+  const joined = await joinRoom({ roomId }).catch(() => false);
+  if (!joined) {
+    location.replace("rooms.html");
+    return;
+  }
+
+  let room = await fetchRoom(roomId);
+  const amDj = isRoomOwner(room, identity.uid);
+  let currentView = renderRoomAccess(room, identity);
   document.getElementById("app").classList.remove("hidden");
 
-  let masterVolume = { value: settings.master_volume ?? 100, muted: false };
+  let masterVolume = { value: room.master_volume ?? 100, muted: false };
   let myVolume = loadMyVolume();
 
   function updateVolumeUI(containerId, value, muted, locked) {
@@ -339,11 +352,11 @@ async function bootstrap() {
     const next = clampVolume(e.target.value);
     const status = document.getElementById("volume-status");
     try {
-      const ok = await setMasterVolume(next);
+      const ok = await setMasterVolume(roomId, next);
       if (!ok) {
-        // DJ 자격을 잃은 사이에 조작한 경우. 서버 값으로 되돌린다.
-        masterVolume = { value: (await fetchSettings()).master_volume ?? 100, muted: masterVolume.muted };
-        status.textContent = "마스터 볼륨을 저장하지 못했어요. DJ 권한을 확인해 주세요.";
+        // 방장이 아닌데 조작한 경우. 서버 값으로 되돌린다.
+        masterVolume = { value: (await fetchRoom(roomId)).master_volume ?? 100, muted: masterVolume.muted };
+        status.textContent = "마스터 볼륨을 저장하지 못했어요. 방장만 조절할 수 있어요.";
       } else {
         masterVolume = { ...masterVolume, value: next };
         status.textContent = "";
@@ -352,7 +365,7 @@ async function bootstrap() {
       // RPC/컬럼이 아직 없는 등 서버 쪽 원인이면 내 화면만 바뀐 채 다른 사람에게는 전달되지 않는다.
       // 조용히 실패해서 DJ가 "적용됐다"고 착각하지 않도록 반드시 알린다.
       console.error(err);
-      masterVolume = { value: (await fetchSettings().catch(() => settings)).master_volume ?? masterVolume.value, muted: masterVolume.muted };
+      masterVolume = { value: (await fetchRoom(roomId).catch(() => room)).master_volume ?? masterVolume.value, muted: masterVolume.muted };
       status.textContent = "마스터 볼륨이 서버에 저장되지 않았어요. 다른 사람에게는 적용되지 않습니다.";
     }
     renderVolume(currentView);
@@ -368,7 +381,7 @@ async function bootstrap() {
   });
 
   // 재생목록 라이브러리는 탭이 아니라 방 화면 오른쪽에 상시 떠 있으므로 부팅 때 바로 켠다.
-  const playlistUIHandle = initPlaylistUI({ ownerUid: identity.uid, amDj });
+  const playlistUIHandle = initPlaylistUI({ ownerUid: identity.uid, roomId, amDj });
 
   // 참여자 목록: 상단 레일의 "N명 참여중" 을 누르면 팝업으로 연다.
   const presenceModal = document.getElementById("presence-modal");
@@ -389,6 +402,7 @@ async function bootstrap() {
   let profiles = await loadProfiles();
 
   presenceChannel = initPresence({
+    roomId,
     uid: identity.uid,
     nickname: identity.nickname,
     getVolume: () => myVolume,
@@ -404,66 +418,33 @@ async function bootstrap() {
     },
   });
 
-  let takingOverDj = false;
-  // heartbeat 는 만료 시각만 바꾸므로, 역할 UID가 바뀔 때만 화면을 새로 고친다.
-  subscribeSettings((payload) => {
-    if (payload.new?.master_volume !== undefined) {
-      masterVolume.value = payload.new.master_volume;
+  // 방 정보에서 실시간으로 따라가야 하는 건 마스터 볼륨뿐이다.
+  // DJ 는 방을 만든 사람으로 고정이라 역할이 도중에 바뀌지 않는다.
+  subscribeRoom(roomId, (payload) => {
+    if (!payload.new) return;
+    room = { ...room, ...payload.new };
+    if (payload.new.master_volume !== undefined) {
+      masterVolume = { ...masterVolume, value: payload.new.master_volume };
       renderVolume(currentView);
     }
-    if (takingOverDj && payload.new?.dj_uid === identity.uid) return;
-    if (payload.new?.dj_uid !== settings.dj_uid) {
-      if (shouldNotifyDjTakeover(settings, payload.new, identity.uid)) {
-        alert("다른 사용자가 DJ가 되었습니다. 이제 리스너로 함께 들어요.");
-      }
-      location.reload();
-    }
+    currentView = renderRoomAccess(room, identity);
   });
 
-  document.getElementById("dj-claim-button").addEventListener("click", async () => {
-    const button = document.getElementById("dj-claim-button");
-    const status = document.getElementById("dj-claim-status");
+  document.getElementById("leave-room-button").addEventListener("click", async () => {
+    const button = document.getElementById("leave-room-button");
     button.disabled = true;
-    status.textContent = "DJ 권한을 요청하는 중…";
     try {
-      takingOverDj = true;
-      const tookOver = await takeOverDj();
-      if (!tookOver) {
-        takingOverDj = false;
-        currentView = renderRoomAccess(await fetchSettings(), identity);
-        renderVolume(currentView);
-        status.textContent = "DJ 권한을 가져오지 못했어요. 다시 시도해 주세요.";
-        return;
-      }
-      settings = { ...settings, dj_uid: identity.uid };
-      amDj = true;
-      currentView = renderRoomAccess(settings, identity);
-      renderVolume(currentView);
-      renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
-      // DJ가 되면 이미 떠 있는 검색 결과에도 ＋(대기열) 버튼이 생겨야 한다.
-      renderSearchResults(lastSearchResults);
-      enableDjControls();
-      startDjHeartbeat();
-      await applyState();
-      status.textContent = "DJ 권한을 가져왔어요.";
+      await leaveRoom(roomId);
     } catch (err) {
-      takingOverDj = false;
       console.error(err);
-      button.disabled = false;
-      status.textContent = "DJ 권한을 가져오지 못했어요. 다시 시도해 주세요.";
+    } finally {
+      // 나가기에 실패해도 화면은 목록으로 돌린다. 멤버십이 남아 있으면 다시 들어오면 그만이다.
+      location.href = "rooms.html";
     }
-  });
-
-  // DJ 가 탭을 닫으면 역할을 반납해 방이 영구히 DJ 없는 상태가 되지 않게 한다.
-  // DJ 가 아니면 release_dj() 는 아무 것도 하지 않는다.
-  window.addEventListener("pagehide", () => {
-    releaseDj().catch(() => {});
   });
 
   // 창 폭이 바뀌면 제목이 넘치는지 다시 재어 흐름 여부를 정한다.
   window.addEventListener("resize", updateTitleMarquee);
-
-  if (amDj) startDjHeartbeat();
 
   // ── 대기열 곡 → 내 재생목록 저장 모달 ──────────────────────
   let myPlaylists = [];
@@ -579,7 +560,7 @@ async function bootstrap() {
     button.disabled = true;
     setSearchStatus("대기열에 넣는 중…");
     try {
-      await addTrackFromLibrary({ youtubeId: result.videoId, title: result.title, uid: identity.uid });
+      await addTrackFromLibrary({ youtubeId: result.videoId, title: result.title, uid: identity.uid, roomId });
       setSearchStatus(`"${result.title}" 대기열에 추가했어요.`, "ok");
     } catch (err) {
       console.error(err);
@@ -657,7 +638,7 @@ async function bootstrap() {
     if (event.key === "Enter") searchButton.click();
   });
 
-  let currentTracks = await fetchTracks();
+  let currentTracks = await fetchTracks(roomId);
   let currentTrackId = null;
   let repeatMode = localStorage.getItem("sugar_dj_repeat") || "off";
 
@@ -681,35 +662,35 @@ async function bootstrap() {
   setPlayerStateChangeHandler(async (event) => {
     if (event.data === 0) { // YT.PlayerState.ENDED
       if (!amDj) return;
-      const state = await fetchPlaybackState();
+      const state = await fetchPlaybackState(roomId);
       const nextAction = computeNextTrackOnEnded({
         tracks: currentTracks,
         currentTrackId: state.current_track_id,
         repeatMode,
       });
       if (nextAction.action === "play") {
-        await djSetTrack(nextAction.trackId);
+        await djSetTrack(roomId, nextAction.trackId);
       } else if (nextAction.action === "stop") {
         const duration = event.target?.getDuration?.() ?? 0;
-        await djPause(duration);
+        await djPause(roomId, duration);
       }
     }
   });
 
-  renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
+  renderTracks({ tracks: currentTracks, roomId, amDj, currentTrackId, saveToPlaylist });
   renderNowPlaying(currentTracks, currentTrackId);
-  subscribeTracks((tracks) => {
+  subscribeTracks(roomId, (tracks) => {
     currentTracks = tracks;
-    renderTracks(tracks, amDj, currentTrackId, saveToPlaylist);
+    renderTracks({ tracks, roomId, amDj, currentTrackId, saveToPlaylist });
     renderNowPlaying(tracks, currentTrackId);
   });
 
   const applyState = async (state) => {
-    const nextState = state ?? await fetchPlaybackState();
+    const nextState = state ?? await fetchPlaybackState(roomId);
     updatePlaybackToggle(nextState.is_playing);
     if (nextState.current_track_id !== currentTrackId) {
       currentTrackId = nextState.current_track_id;
-      renderTracks(currentTracks, amDj, currentTrackId, saveToPlaylist);
+      renderTracks({ tracks: currentTracks, roomId, amDj, currentTrackId, saveToPlaylist });
       renderNowPlaying(currentTracks, currentTrackId);
     }
     await applyPlaybackState(nextState, currentTracks);
@@ -727,34 +708,29 @@ async function bootstrap() {
     alert("음악 플레이어를 불러오지 못했습니다. 새로고침해 주세요.");
   }
 
-  if (identity.fromPrompt) {
-    listenGate?.classList.add("hidden");
-    if (playerOk) {
-      await unlockAudio().catch(console.error);
+  // 방 목록에서 페이지를 이동해 들어오므로 이 페이지에는 아직 사용자 제스처가 없다.
+  // 브라우저 자동재생 정책상 "듣기 시작" 클릭이 있어야 소리가 난다.
+  listenGate?.classList.remove("hidden");
+  listenStart?.addEventListener("click", async () => {
+    listenStart.disabled = true;
+    try {
+      await unlockAudio();
+      listenGate.classList.add("hidden");
+      await applyState();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      listenStart.disabled = false;
     }
-  } else {
-    listenGate?.classList.remove("hidden");
-    listenStart?.addEventListener("click", async () => {
-      listenStart.disabled = true;
-      try {
-        await unlockAudio();
-        listenGate.classList.add("hidden");
-        await applyState();
-      } catch (err) {
-        console.error(err);
-      } finally {
-        listenStart.disabled = false;
-      }
-    });
-  }
+  });
 
   if (playerOk) {
     await syncClockOffset();
     startClockOffsetSync();
     // 최초 1회: loadVideoById 로 영상을 물려두어야 unlockAudio() 의 play/pause 가 의미를 갖는다.
     await applyState();
-    subscribePlaybackState(applyState);
-    startDriftCorrection();
+    subscribePlaybackState(roomId, applyState);
+    startDriftCorrection(roomId);
     startProgressBarUpdates({
       onUpdate: ({ current, duration }) => {
         const percent = Math.min(100, (current / duration) * 100);
@@ -778,7 +754,7 @@ async function bootstrap() {
     if (djControlsBound) return;
     djControlsBound = true;
     document.getElementById("play-button").addEventListener("click", async () => {
-      const state = await fetchPlaybackState();
+      const state = await fetchPlaybackState(roomId);
       if (state.is_playing) {
         // state.position_at_start 는 "마지막으로 재생을 시작한 시점"의 위치일 뿐,
         // 지금 실제로 어디까지 재생됐는지가 아니다. 그대로 넘기면 일시정지할 때마다
@@ -792,22 +768,22 @@ async function bootstrap() {
           serverStartedAt: state.server_started_at,
           nowMs: nowMs(),
         }), duration);
-        await djPause(currentPosition);
+        await djPause(roomId, currentPosition);
         updatePlaybackToggle(false);
       } else if (!state.current_track_id && currentTracks[0]) {
-        await djSetTrack(currentTracks[0].id);
+        await djSetTrack(roomId, currentTracks[0].id);
         updatePlaybackToggle(true);
       } else {
         // 저장된 시작 위치가 곡 끝(이후)이면 그 지점에서 재생을 재개할 수 없다.
         // 그대로 재개하면 즉시 종료되고 종료 처리가 다시 상태를 써서 루프가 된다.
         const duration = getLoadedDuration();
         const resumeAt = clampPositionToDuration(state.position_at_start, duration);
-        await djPlay(duration > 0 && resumeAt >= duration - 0.5 ? 0 : resumeAt);
+        await djPlay(roomId, duration > 0 && resumeAt >= duration - 0.5 ? 0 : resumeAt);
         updatePlaybackToggle(true);
       }
     });
     document.getElementById("prev-button")?.addEventListener("click", async () => {
-      const state = await fetchPlaybackState();
+      const state = await fetchPlaybackState(roomId);
       const currentPosition = clampPositionToDuration(computeExpectedPosition({
         isPlaying: state.is_playing,
         positionAtStart: state.position_at_start,
@@ -822,26 +798,26 @@ async function bootstrap() {
       });
 
       if (decision.action === "prev_track") {
-        await djSetTrack(decision.trackId);
+        await djSetTrack(roomId, decision.trackId);
         updatePlaybackToggle(true);
       } else if (decision.action === "restart") {
         if (decision.isPlaying) {
-          await djPlay(0);
+          await djPlay(roomId, 0);
           updatePlaybackToggle(true);
         } else {
-          await djPause(0);
+          await djPause(roomId, 0);
           updatePlaybackToggle(false);
         }
       }
     });
     document.getElementById("next-button").addEventListener("click", async () => {
-      const state = await fetchPlaybackState();
+      const state = await fetchPlaybackState(roomId);
       const currentIndex = currentTracks.findIndex((t) => t.id === state.current_track_id);
       const next = currentTracks[currentIndex + 1];
       if (next) {
-        await djSetTrack(next.id);
+        await djSetTrack(roomId, next.id);
       } else if (repeatMode === "all" && currentTracks.length > 0) {
-        await djSetTrack(currentTracks[0].id);
+        await djSetTrack(roomId, currentTracks[0].id);
       }
     });
     document.getElementById("repeat-button")?.addEventListener("click", () => {
@@ -858,7 +834,6 @@ async function bootstrap() {
 
 bootstrap().catch((err) => {
   console.error(err);
-  document.getElementById("nickname-modal")?.classList.add("hidden");
   document.getElementById("listen-gate")?.classList.add("hidden");
   const app = document.getElementById("app");
   app?.classList.remove("hidden");

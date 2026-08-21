@@ -26,8 +26,11 @@ export function saveMyVolume({ value, muted }) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ value: clampVolume(value), muted: Boolean(muted) }));
 }
 
-export async function setMasterVolume(value) {
-  const { data, error } = await supabase.rpc("set_master_volume", { v: clampVolume(value) });
+export async function setMasterVolume(roomId, value) {
+  const { data, error } = await supabase.rpc("set_master_volume", {
+    p_room_id: roomId,
+    v: clampVolume(value),
+  });
   if (error) throw error;
   return data === true;
 }

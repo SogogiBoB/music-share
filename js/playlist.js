@@ -30,20 +30,22 @@ export async function fetchYoutubeTitle(videoId) {
   return normalizeTitle(data.title);
 }
 
-export async function fetchTracks() {
-  const { data, error } = await supabase.from("tracks").select().order("position").order("id");
+export async function fetchTracks(roomId) {
+  const { data, error } = await supabase
+    .from("tracks").select().eq("room_id", roomId).order("position").order("id");
   if (error) throw error;
   // 이스케이프된 채로 저장된 기존 행도 화면에서는 제대로 보이게 한다.
   return normalizeTrackTitles(data);
 }
 
-export async function addTrack({ url, uid }) {
+export async function addTrack({ url, uid, roomId }) {
   const videoId = parseYoutubeId(url);
   if (!videoId) throw new Error("유효하지 않은 유튜브 링크");
   const title = await fetchYoutubeTitle(videoId);
-  const existing = await fetchTracks();
+  const existing = await fetchTracks(roomId);
   const position = existing.length;
   const { error } = await supabase.from("tracks").insert({
+    room_id: roomId,
     youtube_id: videoId,
     title,
     added_by: uid,
@@ -59,9 +61,10 @@ export async function deleteTrack(trackId) {
 }
 
 // 대기열은 같은 곡을 여러 번 트는 걸 허용한다. 중복 검사는 내 재생목록 쪽에만 둔다.
-export async function addTrackFromLibrary({ youtubeId, title, uid }) {
-  const existing = await fetchTracks();
+export async function addTrackFromLibrary({ youtubeId, title, uid, roomId }) {
+  const existing = await fetchTracks(roomId);
   const { error } = await supabase.from("tracks").insert({
+    room_id: roomId,
     youtube_id: youtubeId,
     title: normalizeTitle(title),
     added_by: uid,
@@ -70,11 +73,13 @@ export async function addTrackFromLibrary({ youtubeId, title, uid }) {
   if (error) throw error;
 }
 
-export function subscribeTracks(onChange) {
+export function subscribeTracks(roomId, onChange) {
   const channel = supabase
-    .channel("tracks-changes")
-    .on("postgres_changes", { event: "*", schema: "public", table: "tracks" }, async () => {
-      onChange(await fetchTracks());
+    .channel(`tracks-changes-${roomId}`)
+    .on("postgres_changes", {
+      event: "*", schema: "public", table: "tracks", filter: `room_id=eq.${roomId}`,
+    }, async () => {
+      onChange(await fetchTracks(roomId));
     })
     .subscribe();
   return channel;

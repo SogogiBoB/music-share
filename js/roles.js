@@ -1,35 +1,5 @@
 import { supabase } from "./supabaseClient.js";
 
-export async function claimDjIfVacant(_uid) {
-  const { data, error } = await supabase.rpc("claim_dj");
-  if (error) throw error;
-  return data === true;
-}
-
-export async function takeOverDj() {
-  const { data, error } = await supabase.rpc("takeover_dj");
-  if (error) throw error;
-  return data === true;
-}
-
-export async function delegateDj(targetUid) {
-  const { data, error } = await supabase.rpc("delegate_dj", { target_uid: targetUid });
-  if (error) throw error;
-  return data === true;
-}
-
-export async function releaseDj() {
-  const { data, error } = await supabase.rpc("release_dj");
-  if (error) throw error;
-  return data === true;
-}
-
-export async function heartbeatDj() {
-  const { data, error } = await supabase.rpc("heartbeat_dj");
-  if (error) throw error;
-  return data === true;
-}
-
 // presence 메타데이터의 닉네임은 클라이언트가 자유롭게 조작할 수 있다.
 // profiles 는 "본인 프로필만 생성/수정" RLS 로 uid 소유자만 쓸 수 있으므로
 // 표시용 닉네임은 이쪽을 신뢰한다.
@@ -39,55 +9,24 @@ export async function fetchProfiles() {
   return data;
 }
 
-export function subscribeSettings(onChange) {
-  return supabase
-    .channel("settings-changes")
-    .on("postgres_changes", { event: "*", schema: "public", table: "settings" }, onChange)
-    .subscribe();
+// DJ 는 방을 만든 사람으로 고정이다. 임대·양도·회수 개념이 없다.
+export function isRoomOwner(room, uid) {
+  return Boolean(room && uid && room.owner_uid === uid);
 }
 
-export function isCurrentDj(settingsRow, uid) {
-  return settingsRow?.dj_uid === uid;
-}
-
-export function getDjRoleViewState(settingsRow, uid) {
-  const amDj = isCurrentDj(settingsRow, uid);
-  return { amDj, showClaimButton: !amDj };
-}
-
-export function getRoomViewState({ settingsRow, uid, isGuest }) {
-  const amDj = isCurrentDj(settingsRow, uid);
+export function getRoomViewState({ room, uid, isGuest }) {
+  const amDj = isRoomOwner(room, uid);
   return {
     amDj,
     isGuest: Boolean(isGuest),
-    showClaimButton: !amDj && !isGuest,
     showQueuePanel: amDj,
     showTransport: amDj,
     showLibraryTab: !isGuest,
-    canDelegate: amDj,
   };
 }
 
-export function canDelegateTo(targetProfile) {
-  return !targetProfile?.is_guest;
-}
-
-export function isDjLeaseExpired(settingsRow, nowMs = Date.now()) {
-  if (!settingsRow?.dj_uid) return false;
-  const expiresAtMs = Date.parse(settingsRow.dj_lease_expires_at ?? "");
-  return !Number.isFinite(expiresAtMs) || expiresAtMs <= nowMs;
-}
-
-export function canClaimDj(settingsRow, uid, nowMs = Date.now()) {
-  return Boolean(uid) && (!settingsRow?.dj_uid || isDjLeaseExpired(settingsRow, nowMs));
-}
-
-export function shouldNotifyDjTakeover(previousSettings, nextSettings, uid) {
-  return previousSettings?.dj_uid === uid && nextSettings?.dj_uid !== uid;
-}
-
-export async function fetchSettings() {
-  const { data, error } = await supabase.from("settings").select().eq("id", 1).single();
-  if (error) throw error;
-  return data;
+export function getRoomStatusText({ amDj, isGuest }) {
+  if (amDj) return "내가 방장입니다";
+  if (isGuest) return "게스트로 듣는 중이에요";
+  return "방장이 음악을 고르고 있어요";
 }

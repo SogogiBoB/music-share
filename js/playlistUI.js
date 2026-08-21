@@ -14,7 +14,18 @@ const ICON_TRASH = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
   <path d="M10.2 10.4v6.2M13.8 10.4v6.2"/>
 </svg>`;
 
-export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
+// 재생목록 곡 행 오른쪽에 붙는 아이콘 버튼(이동·복사, 대기열 추가, 완료).
+const ICON_MOVE = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M3 6h6l2 2h10v11a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 19z"/><path d="M10 14h5m-2.5-2.5 2.5 2.5-2.5 2.5"/>
+</svg>`;
+const ICON_TO_QUEUE = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M4 6h16M4 11h10M4 16h10"/><path d="M18 13.5v7M14.5 17h7"/>
+</svg>`;
+const ICON_CHECK = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
+  <path d="M5 13l4 4L19 7"/>
+</svg>`;
+
+export function initPlaylistUI({ ownerUid, roomId, amDj = false, uid = ownerUid }) {
   let playlists = [];
   let selectedPlaylistId = null;
 
@@ -115,7 +126,8 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "key move";
-    btn.textContent = "이동·복사";
+    btn.title = "다른 재생목록으로 이동·복사";
+    btn.innerHTML = ICON_MOVE;
     btn.setAttribute("aria-haspopup", "dialog");
     btn.setAttribute("aria-label", `${track.title} 다른 재생목록으로 이동하거나 복사`);
     btn.addEventListener("click", () => openMoveModal(track, playlist));
@@ -172,6 +184,8 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
       del.type = "button";
       del.className = "rm";
       del.textContent = "×";
+      del.title = "삭제";
+      del.setAttribute("aria-label", `${t.title} 삭제`);
       del.addEventListener("click", async () => {
         try {
           await removeTrackFromPlaylist(t.id);
@@ -187,18 +201,25 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
         const toQueue = document.createElement("button");
         toQueue.className = "key to-room";
         toQueue.type = "button";
-        toQueue.textContent = "＋ 대기열";
+        toQueue.title = "대기열에 추가";
+        toQueue.setAttribute("aria-label", `${t.title} 대기열에 추가`);
+        toQueue.innerHTML = ICON_TO_QUEUE;
         toQueue.addEventListener("click", async () => {
           toQueue.disabled = true;
           try {
-            await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: uid ?? ownerUid });
-            toQueue.textContent = "대기열에 넣었어요";
+            await addTrackFromLibrary({ youtubeId: t.youtube_id, title: t.title, uid: uid ?? ownerUid, roomId });
+            toQueue.innerHTML = ICON_CHECK;
+            toQueue.title = "대기열에 넣었어요";
+            setStatus(`"${t.title}" 대기열에 추가했어요.`);
           } catch (err) {
             console.error(err);
             setStatus(err.message ?? "대기열에 넣지 못했어요.", true);
           } finally {
             toQueue.disabled = false;
-            setTimeout(() => { toQueue.textContent = "＋ 대기열"; }, 1500);
+            setTimeout(() => {
+              toQueue.innerHTML = ICON_TO_QUEUE;
+              toQueue.title = "대기열에 추가";
+            }, 1500);
           }
         });
         elements.push(toQueue);
