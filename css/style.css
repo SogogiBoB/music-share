@@ -79,7 +79,6 @@ button{font-family:inherit}
 .titlebar .star{color:var(--candy); font-size:14px; text-shadow:0 0 4px rgba(255,95,162,.8)}
 .title-txt{font-family:var(--px); font-size:12px; letter-spacing:.02em}
 .dlg .title-txt{font-family:var(--kr); font-size:12px; font-weight:700; letter-spacing:0}
-.title-sub{font-size:11px; font-weight:500; opacity:.86}
 .title-sp{flex:1}
 .tbtn{
   display:inline-flex; align-items:center; justify-content:center;
@@ -406,7 +405,6 @@ button.tt:focus-visible{outline:1px dotted currentColor}
   body{padding:10px 10px 16px}
   .body{grid-template-columns:minmax(0,1fr)}
   .rail{flex-direction:row; justify-content:flex-start; padding:6px 8px}
-  .title-sub{display:none}
   .statusbar .st:last-child{display:none}
   #playlist-section .pbody{height:360px}
 }
