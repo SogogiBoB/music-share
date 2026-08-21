@@ -117,7 +117,7 @@ function renderPresence(users, profiles) {
   }
 }
 
-function renderTracks({ tracks, roomId, amDj, currentTrackId, saveToPlaylist = null }) {
+function renderTracks({ tracks, roomId, amDj, currentTrackId, saveToPlaylist = null, onTrackDeleted = null }) {
   const list = document.getElementById("track-list");
   const queueCount = document.getElementById("queue-count");
   if (queueCount) queueCount.textContent = String(tracks.length).padStart(2, "0");
@@ -216,6 +216,9 @@ function renderTracks({ tracks, roomId, amDj, currentTrackId, saveToPlaylist = n
         del.disabled = true;
         try {
           await deleteTrack(t.id);
+          if (onTrackDeleted) {
+            await onTrackDeleted(t.id);
+          }
         } catch (err) {
           console.error(err);
           alert("곡을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
@@ -677,12 +680,25 @@ async function bootstrap() {
     }
   });
 
-  renderTracks({ tracks: currentTracks, roomId, amDj, currentTrackId, saveToPlaylist });
-  renderNowPlaying(currentTracks, currentTrackId);
-  subscribeTracks(roomId, (tracks) => {
+  const updateTracksUI = (tracks = currentTracks) => {
     currentTracks = tracks;
-    renderTracks({ tracks, roomId, amDj, currentTrackId, saveToPlaylist });
-    renderNowPlaying(tracks, currentTrackId);
+    renderTracks({
+      tracks: currentTracks,
+      roomId,
+      amDj,
+      currentTrackId,
+      saveToPlaylist,
+      onTrackDeleted: async (deletedId) => {
+        currentTracks = currentTracks.filter((t) => t.id !== deletedId);
+        updateTracksUI(currentTracks);
+      },
+    });
+    renderNowPlaying(currentTracks, currentTrackId);
+  };
+
+  updateTracksUI(currentTracks);
+  subscribeTracks(roomId, (tracks) => {
+    updateTracksUI(tracks);
   });
 
   const applyState = async (state) => {
@@ -690,8 +706,7 @@ async function bootstrap() {
     updatePlaybackToggle(nextState.is_playing);
     if (nextState.current_track_id !== currentTrackId) {
       currentTrackId = nextState.current_track_id;
-      renderTracks({ tracks: currentTracks, roomId, amDj, currentTrackId, saveToPlaylist });
-      renderNowPlaying(currentTracks, currentTrackId);
+      updateTracksUI(currentTracks);
     }
     await applyPlaybackState(nextState, currentTracks);
   };

@@ -311,6 +311,7 @@ create table public.tracks (
 create index tracks_room_id_idx on public.tracks (room_id, position);
 
 alter table public.tracks enable row level security;
+alter table public.tracks replica identity full;
 
 create policy "방 멤버만 대기열 조회" on public.tracks
   for select using (public.is_room_member(room_id, auth.uid()));
@@ -333,6 +334,7 @@ create table public.playback_state (
 );
 
 alter table public.playback_state enable row level security;
+alter table public.playback_state replica identity full;
 
 create policy "방 멤버만 재생상태 조회" on public.playback_state
   for select using (public.is_room_member(room_id, auth.uid()));
