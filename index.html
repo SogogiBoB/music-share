@@ -3,268 +3,320 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#4b301c">
+  <meta name="theme-color" content="#5fb3e6">
   <meta name="description" content="친구들과 같은 음악을 같은 순간에 듣는 실시간 음악 공유 공간">
   <title>Sugar DJ · Music Share</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div class="sky" aria-hidden="true">
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="cl-a" viewBox="0 0 26 12">
+<g fill="#4a79c4"><rect x="11" y="0" width="4" height="1"/><rect x="9" y="1" width="2" height="1"/><rect x="15" y="1" width="2" height="1"/><rect x="5" y="2" width="2" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="17" y="2" width="1" height="1"/><rect x="19" y="2" width="2" height="1"/><rect x="3" y="3" width="2" height="1"/><rect x="7" y="3" width="2" height="1"/><rect x="17" y="3" width="2" height="1"/><rect x="21" y="3" width="2" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="23" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="25" y="6" width="1" height="1"/><rect x="0" y="7" width="1" height="1"/><rect x="25" y="7" width="1" height="1"/><rect x="0" y="8" width="1" height="1"/><rect x="25" y="8" width="1" height="1"/><rect x="0" y="9" width="1" height="1"/><rect x="25" y="9" width="1" height="1"/><rect x="0" y="10" width="1" height="1"/><rect x="25" y="10" width="1" height="1"/><rect x="1" y="11" width="24" height="1"/></g>
+<g fill="#ffffff"><rect x="11" y="1" width="4" height="1"/><rect x="9" y="2" width="8" height="1"/><rect x="5" y="3" width="2" height="1"/><rect x="9" y="3" width="8" height="1"/><rect x="19" y="3" width="2" height="1"/><rect x="3" y="4" width="20" height="1"/><rect x="2" y="5" width="22" height="1"/><rect x="1" y="6" width="24" height="1"/><rect x="1" y="7" width="6" height="1"/><rect x="9" y="7" width="8" height="1"/><rect x="19" y="7" width="6" height="1"/><rect x="1" y="8" width="6" height="1"/><rect x="9" y="8" width="8" height="1"/><rect x="19" y="8" width="6" height="1"/></g>
+<g fill="#a8cdf0"><rect x="7" y="7" width="2" height="1"/><rect x="17" y="7" width="2" height="1"/><rect x="7" y="8" width="2" height="1"/><rect x="17" y="8" width="2" height="1"/><rect x="1" y="9" width="24" height="1"/><rect x="1" y="10" width="24" height="1"/></g>
+</symbol>
+<symbol id="cl-b" viewBox="0 0 18 8">
+<g fill="#4a79c4"><rect x="9" y="0" width="4" height="1"/><rect x="4" y="1" width="2" height="1"/><rect x="8" y="1" width="1" height="1"/><rect x="13" y="1" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="6" y="2" width="2" height="1"/><rect x="14" y="2" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="15" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="16" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="17" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="17" y="6" width="1" height="1"/><rect x="1" y="7" width="16" height="1"/></g>
+<g fill="#ffffff"><rect x="9" y="1" width="4" height="1"/><rect x="4" y="2" width="2" height="1"/><rect x="8" y="2" width="6" height="1"/><rect x="3" y="3" width="12" height="1"/><rect x="2" y="4" width="14" height="1"/></g>
+<g fill="#a8cdf0"><rect x="1" y="5" width="16" height="1"/><rect x="1" y="6" width="16" height="1"/></g>
+</symbol>
+    </defs></svg>
+    <svg class="cl c1" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+    <svg class="cl c2" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+    <svg class="cl c3" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+    <svg class="cl c4" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+    <svg class="cl c5" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+    <svg class="cl c6" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+    <svg class="cl c8" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+    <svg class="cl c9" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+    <svg class="cl c7" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+  </div>
 
   <div id="nickname-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="nickname-title">
-    <div class="cabinet gate">
-      <section class="face">
-        <div class="body">
-          <div class="gate-tabs" role="tablist">
-            <button id="auth-tab-login" class="auth-tab" type="button" role="tab" aria-selected="true">로그인</button>
-            <button id="auth-tab-signup" class="auth-tab" type="button" role="tab" aria-selected="false">회원가입</button>
-            <button id="auth-tab-guest" class="auth-tab" type="button" role="tab" aria-selected="false">게스트</button>
-          </div>
-
-          <div id="auth-panel-login" role="tabpanel">
-            <h2 id="nickname-title" style="margin-top:20px">전원을 켜고 들어오세요</h2>
-            <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
-            <label class="lab" for="login-email-input">EMAIL</label>
-            <input id="login-email-input" class="field" type="email" placeholder="이메일" autocomplete="email">
-            <label class="lab" for="login-password-input">PASSWORD</label>
-            <input id="login-password-input" class="field" type="password" placeholder="비밀번호" autocomplete="current-password">
-            <p id="login-error" class="note err" role="alert"></p>
-            <button id="login-submit" class="key key-on" type="button">로그인</button>
-          </div>
-
-          <div id="auth-panel-signup" class="hidden" role="tabpanel">
-            <label class="lab" for="signup-email-input" style="margin-top:20px">EMAIL</label>
-            <input id="signup-email-input" class="field" type="email" placeholder="이메일" autocomplete="email">
-            <label class="lab" for="signup-nickname-input">NICKNAME</label>
-            <input id="signup-nickname-input" class="field" type="text" maxlength="20" placeholder="닉네임" autocomplete="nickname">
-            <label class="lab" for="signup-password-input">PASSWORD</label>
-            <input id="signup-password-input" class="field" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="new-password">
-            <p id="signup-error" class="note err" role="alert"></p>
-            <button id="signup-submit" class="key key-on" type="button">가입하고 입장하기</button>
-          </div>
-
-          <div id="auth-panel-guest" class="hidden" role="tabpanel">
-            <h2 style="margin-top:20px">가입 없이<br>듣기만 할래요</h2>
-            <p class="sub">닉네임만 정하면 바로 들어옵니다.</p>
-            <label class="lab" for="guest-nickname-input">NICKNAME</label>
-            <input id="guest-nickname-input" class="field" type="text" maxlength="20" placeholder="닉네임" autocomplete="nickname">
-            <ul class="gate-limits">
-              <li>DJ가 될 수 없고, DJ 위임도 받지 않습니다</li>
-              <li>내 재생목록을 만들거나 볼 수 없습니다</li>
-              <li>듣기와 내 소리 크기 조절은 그대로 됩니다</li>
-            </ul>
-            <p id="guest-error" class="note err" role="alert"></p>
-            <button id="guest-submit" class="key key-on" type="button">게스트로 입장</button>
-          </div>
+    <div class="dlg dlg-wide">
+      <div class="titlebar">
+        <span class="star" aria-hidden="true">★</span>
+        <span class="title-txt">접속</span>
+        <span class="title-sp"></span>
+        <span class="tbtn x" aria-hidden="true">✕</span>
+      </div>
+      <div class="dlg-body">
+        <div class="tabs" role="tablist">
+          <button id="auth-tab-login" class="tab" type="button" role="tab" aria-selected="true">로그인</button>
+          <button id="auth-tab-signup" class="tab" type="button" role="tab" aria-selected="false">회원가입</button>
+          <button id="auth-tab-guest" class="tab" type="button" role="tab" aria-selected="false">게스트</button>
         </div>
-      </section>
+
+        <div id="auth-panel-login" class="tabpane" role="tabpanel">
+          <h2 id="nickname-title">전원을 켜고 들어오세요</h2>
+          <p class="sub">같은 방, 같은 곡, 같은 지점에서 재생됩니다.</p>
+          <label class="lab" for="login-email-input">이메일</label>
+          <input id="login-email-input" class="field field-block" type="email" autocomplete="email">
+          <label class="lab" for="login-password-input">비밀번호</label>
+          <input id="login-password-input" class="field field-block" type="password" autocomplete="current-password">
+          <p id="login-error" class="note err" role="alert"></p>
+          <button id="login-submit" class="key key-on" type="button">로그인</button>
+        </div>
+
+        <div id="auth-panel-signup" class="tabpane hidden" role="tabpanel">
+          <label class="lab" for="signup-email-input">이메일</label>
+          <input id="signup-email-input" class="field field-block" type="email" autocomplete="email">
+          <label class="lab" for="signup-nickname-input">닉네임</label>
+          <input id="signup-nickname-input" class="field field-block" type="text" maxlength="20" autocomplete="nickname">
+          <label class="lab" for="signup-password-input">비밀번호</label>
+          <input id="signup-password-input" class="field field-block" type="password" placeholder="6자 이상" autocomplete="new-password">
+          <p id="signup-error" class="note err" role="alert"></p>
+          <button id="signup-submit" class="key key-on" type="button">가입하고 입장하기</button>
+        </div>
+
+        <div id="auth-panel-guest" class="tabpane hidden" role="tabpanel">
+          <h2>가입 없이 듣기만 할래요</h2>
+          <p class="sub">닉네임만 정하면 바로 들어옵니다.</p>
+          <label class="lab" for="guest-nickname-input">닉네임</label>
+          <input id="guest-nickname-input" class="field field-block" type="text" maxlength="20" autocomplete="nickname">
+          <ul class="limits">
+            <li>DJ가 될 수 없고, DJ 위임도 받지 않습니다</li>
+            <li>내 재생목록을 만들거나 볼 수 없습니다</li>
+            <li>듣기와 내 소리 크기 조절은 그대로 됩니다</li>
+          </ul>
+          <p id="guest-error" class="note err" role="alert"></p>
+          <button id="guest-submit" class="key key-on" type="button">게스트로 입장</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <div id="listen-gate" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="listen-title">
-    <div class="cabinet gate">
-      <section class="face">
-        <div class="plate">sound check<span class="code">브라우저 재생 정책</span></div>
-        <div class="body">
-          <h2 id="listen-title">같이 들을 준비가<br>됐나요?</h2>
+    <div class="dlg">
+      <div class="titlebar">
+        <span class="star" aria-hidden="true">★</span>
+        <span class="title-txt">소리 확인</span>
+        <span class="title-sp"></span>
+        <span class="tbtn x" aria-hidden="true">✕</span>
+      </div>
+      <div class="dlg-body dlg-icon">
+        <span class="dlg-ico" aria-hidden="true">🔊</span>
+        <div>
+          <h2 id="listen-title">같이 들을 준비가 됐나요?</h2>
           <p class="sub">처음 한 번만 눌러 주세요. 브라우저가 자동 재생을 막기 때문에 시작 버튼이 필요합니다.</p>
-          <p class="warmup">&gt; WARMING UP TUBES...</p>
-          <button id="listen-start" class="key key-on" type="button">
-            듣기 시작
-          </button>
+          <p class="warmup">＞ 진공관 예열 중…</p>
         </div>
-      </section>
+      </div>
+      <div class="dlg-foot"><button id="listen-start" class="key key-on" type="button">듣기 시작</button></div>
     </div>
   </div>
 
   <div id="presence-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="presence-title">
-    <div class="cabinet gate">
-      <section class="face">
-        <div class="plate">presets — 함께 듣는 중<span class="code"><span id="presence-modal-count">0</span>명</span></div>
-        <div class="body">
-          <h2 id="presence-title">지금 함께<br>듣는 사람</h2>
+    <div class="dlg">
+      <div class="titlebar">
+        <span class="star" aria-hidden="true">★</span>
+        <span class="title-txt">함께 듣는 사람</span>
+        <span class="title-sp"></span>
+        <span class="tbtn x" aria-hidden="true">✕</span>
+      </div>
+      <div class="dlg-body">
+        <div class="phead"><span>지금 함께 듣는 사람</span><span class="sp"></span>
+          <span class="led"><span class="ghost">888</span><span id="presence-modal-count">0</span>명</span></div>
+        <h2 id="presence-title" class="sr-only">지금 함께 듣는 사람</h2>
+        <div class="pbody">
           <ul id="presence-list" class="presets" aria-live="polite"></ul>
-          <button id="presence-close" class="key" type="button">닫기</button>
         </div>
-      </section>
+      </div>
+      <div class="dlg-foot"><button id="presence-close" class="key" type="button">닫기</button></div>
     </div>
   </div>
 
   <div id="save-track-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="save-track-title">
-    <div class="cabinet gate">
-      <section class="face">
-        <div class="plate">save<span class="code">대기열 곡을 내 재생목록으로</span></div>
-        <div class="body">
-          <h2 id="save-track-title">어느 재생목록에<br>넣을까요?</h2>
-          <p class="sub" id="save-track-name">—</p>
+    <div class="dlg">
+      <div class="titlebar">
+        <span class="star" aria-hidden="true">★</span>
+        <span class="title-txt">재생목록에 담기</span>
+        <span class="title-sp"></span>
+        <span class="tbtn x" aria-hidden="true">✕</span>
+      </div>
+      <div class="dlg-body">
+        <h2 id="save-track-title">어느 재생목록에 넣을까요?</h2>
+        <p class="sub" id="save-track-name">—</p>
+        <div class="pbody">
           <ul id="save-track-options" class="save-options" role="radiogroup" aria-label="저장할 내 재생목록"></ul>
-          <p id="save-track-status" class="note" role="status" aria-live="polite"></p>
-          <div class="save-actions">
-            <button id="save-track-cancel" class="key" type="button">취소</button>
-            <button id="save-track-submit" class="key key-on" type="button">저장</button>
-          </div>
         </div>
-      </section>
+        <p id="save-track-status" class="note" role="status" aria-live="polite"></p>
+      </div>
+      <div class="dlg-foot">
+        <button id="save-track-cancel" class="key" type="button">취소</button>
+        <button id="save-track-submit" class="key key-on" type="button">저장</button>
+      </div>
     </div>
   </div>
 
   <div id="new-playlist-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="new-playlist-title">
-    <div class="cabinet gate">
-      <section class="face">
-        <div class="plate">new<span class="code">재생 목록 만들기</span></div>
-        <div class="body">
-          <h2 id="new-playlist-title">새 재생 목록</h2>
-          <input id="new-playlist-name-input" class="field field-block" type="text" placeholder="재생 목록 이름" maxlength="40" aria-label="새 재생 목록 이름">
-          <p id="new-playlist-status" class="note" role="status" aria-live="polite"></p>
-          <div class="save-actions">
-            <button id="new-playlist-cancel" class="key" type="button">취소</button>
-            <button id="new-playlist-submit" class="key key-on" type="button">추가</button>
-          </div>
-        </div>
-      </section>
+    <div class="dlg">
+      <div class="titlebar">
+        <span class="star" aria-hidden="true">★</span>
+        <span class="title-txt">재생목록 만들기</span>
+        <span class="title-sp"></span>
+        <span class="tbtn x" aria-hidden="true">✕</span>
+      </div>
+      <div class="dlg-body">
+        <h2 id="new-playlist-title">새 재생목록</h2>
+        <input id="new-playlist-name-input" class="field field-block" type="text" placeholder="재생목록 이름" maxlength="40" aria-label="새 재생목록 이름">
+        <p id="new-playlist-status" class="note" role="status" aria-live="polite"></p>
+      </div>
+      <div class="dlg-foot">
+        <button id="new-playlist-cancel" class="key" type="button">취소</button>
+        <button id="new-playlist-submit" class="key key-on" type="button">추가</button>
+      </div>
     </div>
   </div>
 
-  <main id="app" class="cabinet hidden">
-    <section class="face">
-      <div class="rail">
-        <span class="pilot"><i></i> on air</span>
-        <button id="presence-open" class="pilot pilot-key" type="button" aria-haspopup="dialog"
-                aria-label="참여자 목록 보기"><span id="presence-count">0</span>명 참여중</button>
-        <span class="sp"></span>
-        <p id="dj-claim-status" class="pilot" role="status" aria-live="polite"></p>
-        <button id="dj-claim-button" class="key key-on hidden" type="button">DJ 되기</button>
-        <button id="logout-button" class="key" type="button">로그아웃</button>
-      </div>
-    </section>
+  <main id="app" class="win hidden">
+    <div class="titlebar">
+      <span class="star" aria-hidden="true">★</span>
+      <span class="title-txt">SUGAR DJ 7.0</span>
+      <span class="title-sub">— 같이 듣는 방</span>
+      <span class="title-sp"></span>
+      <span class="tbtn" aria-hidden="true">_</span>
+      <span class="tbtn" aria-hidden="true">□</span>
+      <span class="tbtn x" aria-hidden="true">✕</span>
+    </div>
 
-    <div id="room-view">
-      <div class="room-left">
-      <section class="face">
-        <div class="plate">now playing</div>
-        <div class="deck">
-          <div class="tube-wrap">
-            <div class="tube">
-              <div class="status"><span class="on">&#9654; PLAY</span><span>SYNC LOCK</span></div>
-              <h2 id="now-title">—</h2>
-              <p class="sub" id="now-sub">DJ가 곡을 고르는 중이에요</p>
-              <div class="clock"><span id="now-elapsed">00:00</span><span id="now-remain">-00:00</span></div>
-              <div id="playback-progress" class="scale" role="progressbar" aria-label="재생 진행률"
-                   aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                <div class="ticks"></div>
-                <div id="playback-progress-fill" class="fill"></div>
-                <div class="head"></div>
+    <div class="menubar" aria-hidden="true">
+      <span>파일</span><span>방</span><span>재생</span><span>보기</span><span>도움말</span>
+    </div>
+
+    <div class="starbar">
+      <span class="pilot"><i></i> 방송 중</span>
+      <p id="dj-claim-status" class="room" role="status" aria-live="polite"></p>
+      <span class="sp"></span>
+      <button id="dj-claim-button" class="key key-on hidden" type="button">DJ 되기</button>
+      <button id="logout-button" class="key" type="button">로그아웃</button>
+    </div>
+
+    <div class="body">
+      <nav class="rail" aria-label="화면 이동">
+        <a class="orb on" href="#now-panel" title="지금 재생"><span aria-hidden="true">♪</span><span class="sr-only">지금 재생</span></a>
+        <a class="orb" href="#playlist-section" title="대기열"><span aria-hidden="true">≡</span><span class="sr-only">대기열</span></a>
+        <a class="orb" href="#library-section" title="내 재생목록"><span aria-hidden="true">◎</span><span class="sr-only">내 재생목록</span></a>
+        <button id="presence-open" class="orb orb-count" type="button" aria-haspopup="dialog" aria-label="참여자 목록 보기">
+          <span id="presence-count">0</span>
+        </button>
+      </nav>
+
+      <div id="room-view">
+        <div class="room-left">
+          <section id="now-panel" class="device" aria-label="지금 재생">
+              <div class="brand"><span>지금 재생</span></div>
+              <div class="lcd">
+                <div class="lcd-top"><span>▶ 재생 중</span></div>
+                <h2 id="now-title">—</h2>
+                <p class="lcd-artist" id="now-sub">DJ가 곡을 고르는 중이에요</p>
+                <div class="lcd-time"><span id="now-elapsed">00:00</span><span id="now-remain">-00:00</span></div>
+                <div id="playback-progress" class="bar" role="progressbar" aria-label="재생 진행률"
+                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <div id="playback-progress-fill" class="fill"></div>
+                  <div class="head"></div>
+                </div>
+                <div class="lcd-foot"><span>스테레오</span></div>
+              </div>
+
+              <section id="controls-section" class="transport hidden" aria-label="재생 컨트롤">
+                <button id="prev-button" class="tk" type="button" aria-label="이전 곡" title="이전 곡"><span aria-hidden="true">◀◀</span></button>
+                <button id="play-button" class="tk main" type="button" aria-label="재생" title="재생/일시정지"><span aria-hidden="true">▶</span></button>
+                <button id="next-button" class="tk" type="button" aria-label="다음 곡" title="다음 곡"><span aria-hidden="true">▶▶</span></button>
+                <button id="repeat-button" class="tk is-off" type="button" aria-label="반복 재생 (꺼짐)" title="반복 모드 전환">
+                  <svg id="repeat-icon" class="repeat-glyph" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="rg-line" d="M9 5 H15 A4 4 0 0 1 19 9 V11.4"/>
+                    <path class="rg-head" d="M16.6 10 L19 13 L21.4 10"/>
+                    <path class="rg-line" d="M15 19 H9 A4 4 0 0 1 5 15 V12.6"/>
+                    <path class="rg-head" d="M7.4 14 L5 11 L2.6 14"/>
+                    <text class="rg-one" x="12" y="12" text-anchor="middle" dominant-baseline="central">1</text>
+                  </svg>
+                </button>
+              </section>
+          </section>
+
+          <div class="mixer">
+              <p class="cap">출력 레벨</p>
+              <div class="vu" aria-hidden="true">
+                <i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i>
+                <i class="a"></i><i class="b"></i><i class="b"></i><i class="c"></i><i></i><i></i><i></i>
+              </div>
+              <div class="vol" id="master-volume">
+                <span class="vol-name">전체 소리</span>
+                <button id="master-volume-mute" class="mute" type="button" aria-label="마스터 음소거" title="마스터 음소거">
+                  <svg class="spk" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="spk-body" d="M4 9.5h3.6L12 5.6v12.8L7.6 14.5H4z"/>
+                    <path class="spk-wave" d="M15.4 9.2a4 4 0 0 1 0 5.6"/>
+                    <path class="spk-wave spk-wave2" d="M17.9 6.7a7.5 7.5 0 0 1 0 10.6"/>
+                    <path class="spk-x" d="M16 9.5l5 5m0-5l-5 5"/>
+                  </svg>
+                </button>
+                <input id="master-volume-input" class="slider" type="range" min="0" max="100" value="100" aria-label="마스터 볼륨">
+                <span class="pct"></span>
+              </div>
+              <div class="vol" id="my-volume">
+                <span class="vol-name">내 소리</span>
+                <button id="my-volume-mute" class="mute" type="button" aria-label="내 볼륨 음소거" title="내 볼륨 음소거">
+                  <svg class="spk" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="spk-body" d="M4 9.5h3.6L12 5.6v12.8L7.6 14.5H4z"/>
+                    <path class="spk-wave" d="M15.4 9.2a4 4 0 0 1 0 5.6"/>
+                    <path class="spk-wave spk-wave2" d="M17.9 6.7a7.5 7.5 0 0 1 0 10.6"/>
+                    <path class="spk-x" d="M16 9.5l5 5m0-5l-5 5"/>
+                  </svg>
+                </button>
+                <input id="my-volume-input" class="slider" type="range" min="0" max="100" value="100" aria-label="내 볼륨">
+                <span class="pct"></span>
+              </div>
+            <p id="listener-note" class="listener-note hidden">
+              재생은 <b>DJ가 맞춥니다</b>. 내 소리 크기는 <b>내 소리</b>에서 조절하세요.
+            </p>
+          </div>
+
+          <section id="playlist-section" class="panel" aria-labelledby="playlist-title">
+            <div class="phead"><span>대기열</span><span class="sp"></span>
+              <span class="led"><span class="ghost">888</span><span id="queue-count">00</span></span></div>
+            <h2 id="playlist-title" class="sr-only">대기열</h2>
+            <div class="pbody">
+              <ul id="track-list" aria-live="polite"></ul>
+            </div>
+          </section>
+        </div>
+
+        <section id="library-section" class="panel" aria-labelledby="library-title">
+          <div class="phead"><span>내 재생목록</span></div>
+          <h2 id="library-title" class="sr-only">내 재생목록</h2>
+          <div class="lib">
+            <div class="lib-search">
+              <div class="searchrow">
+                <input id="track-search-input" class="field" type="text" placeholder="유튜브 링크 또는 곡 제목" aria-label="유튜브 링크 또는 곡 제목으로 검색" aria-describedby="track-search-status">
+                <button id="track-search-button" class="key key-go" type="button">검색</button>
+              </div>
+              <ul id="track-search-results" class="finds" aria-live="polite"></ul>
+              <p id="track-search-status" class="note" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="lib-side">
+              <div class="lib-side-body pbody">
+                <p id="playlist-manager-status" class="note" role="status" aria-live="polite"></p>
+                <ul id="playlist-list" class="acc" aria-live="polite"></ul>
+              </div>
+              <div class="lib-side-foot">
+                <button id="new-playlist-button" class="key new-pl" type="button" aria-haspopup="dialog">＋ 새 재생목록</button>
               </div>
             </div>
           </div>
-          <div class="controls">
-            <span class="hint">output level</span>
-            <div class="vu" aria-hidden="true">
-              <span class="lbl">VU</span><span class="red">+3</span>
-              <svg class="vu-face" viewBox="0 0 200 92" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path d="M53.2,36.0 A70,70 0 0 1 114.6,19.5" fill="none" stroke="#2b1d10" stroke-width="1.4" opacity=".6"/><path d="M114.6,19.5 A70,70 0 0 1 146.8,36.0" fill="none" stroke="#c0342a" stroke-width="1.8" opacity=".8"/><line x1="63.9" y1="47.9" x2="53.2" y2="36.0" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="66.7" y1="40.5" x2="59.8" y2="30.7" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="72.8" y1="36.8" x2="67.1" y2="26.2" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="80.6" y1="37.6" x2="74.9" y2="22.6" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="86.0" y1="31.7" x2="83.1" y2="20.1" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="92.9" y1="30.4" x2="91.5" y2="18.5" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="100.0" y1="34.0" x2="100.0" y2="18.0" stroke="#2b1d10" stroke-width="2" opacity="0.85"/><line x1="107.1" y1="30.4" x2="108.5" y2="18.5" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="114.0" y1="31.7" x2="116.9" y2="20.1" stroke="#2b1d10" stroke-width="1.1" opacity="0.55"/><line x1="119.4" y1="37.6" x2="125.1" y2="22.6" stroke="#c0342a" stroke-width="2" opacity="0.85"/><line x1="127.2" y1="36.8" x2="132.9" y2="26.2" stroke="#c0342a" stroke-width="1.1" opacity="0.55"/><line x1="133.3" y1="40.5" x2="140.2" y2="30.7" stroke="#c0342a" stroke-width="1.1" opacity="0.55"/><line x1="136.1" y1="47.9" x2="146.8" y2="36.0" stroke="#c0342a" stroke-width="2" opacity="0.85"/></svg>
-              <div class="needle"></div>
-            </div>
-            <div class="grille" aria-hidden="true"></div>
-          </div>
-        </div>
-
-        <div class="tvbar">
-          <section id="controls-section" class="tv-transport hidden" aria-label="재생 컨트롤">
-            <div class="knobs">
-              <button id="prev-button" class="knob" type="button" aria-label="이전 곡" title="이전 곡">
-                <span aria-hidden="true">❙◀</span>
-              </button>
-              <button id="play-button" class="knob knob-main" type="button" aria-label="재생" title="재생/일시정지">
-                <span aria-hidden="true">▶</span>
-              </button>
-              <button id="next-button" class="knob" type="button" aria-label="다음 곡" title="다음 곡">
-                <span aria-hidden="true">▶❙</span>
-              </button>
-              <button id="repeat-button" class="knob is-off" type="button" aria-label="반복 재생 (꺼짐)" title="반복 모드 전환">
-                <svg id="repeat-icon" class="repeat-glyph" viewBox="0 0 24 24" aria-hidden="true">
-                  <path class="rg-line" d="M9 5 H15 A4 4 0 0 1 19 9 V11.4"/>
-                  <path class="rg-head" d="M16.6 10 L19 13 L21.4 10"/>
-                  <path class="rg-line" d="M15 19 H9 A4 4 0 0 1 5 15 V12.6"/>
-                  <path class="rg-head" d="M7.4 14 L5 11 L2.6 14"/>
-                  <text class="rg-one" x="12" y="12" text-anchor="middle" dominant-baseline="central">1</text>
-                </svg>
-              </button>
-            </div>
-          </section>
-
-          <div class="tv-vols">
-            <div class="tv-vol" id="master-volume">
-              <span class="tv-vol-name">MASTER</span>
-              <button id="master-volume-mute" class="tv-mute" type="button" aria-label="마스터 음소거" title="마스터 음소거">
-                <svg class="tv-spk" viewBox="0 0 24 24" aria-hidden="true">
-                  <path class="spk-body" d="M4 9.5h3.6L12 5.6v12.8L7.6 14.5H4z"/>
-                  <path class="spk-wave" d="M15.4 9.2a4 4 0 0 1 0 5.6"/>
-                  <path class="spk-wave spk-wave2" d="M17.9 6.7a7.5 7.5 0 0 1 0 10.6"/>
-                  <path class="spk-x" d="M16 9.5l5 5m0-5l-5 5"/>
-                </svg>
-              </button>
-              <input id="master-volume-input" class="tv-slider" type="range" min="0" max="100" value="100" aria-label="마스터 볼륨">
-            </div>
-            <div class="tv-vol" id="my-volume">
-              <span class="tv-vol-name">MY SET</span>
-              <button id="my-volume-mute" class="tv-mute" type="button" aria-label="내 볼륨 음소거" title="내 볼륨 음소거">
-                <svg class="tv-spk" viewBox="0 0 24 24" aria-hidden="true">
-                  <path class="spk-body" d="M4 9.5h3.6L12 5.6v12.8L7.6 14.5H4z"/>
-                  <path class="spk-wave" d="M15.4 9.2a4 4 0 0 1 0 5.6"/>
-                  <path class="spk-wave spk-wave2" d="M17.9 6.7a7.5 7.5 0 0 1 0 10.6"/>
-                  <path class="spk-x" d="M16 9.5l5 5m0-5l-5 5"/>
-                </svg>
-              </button>
-              <input id="my-volume-input" class="tv-slider" type="range" min="0" max="100" value="100" aria-label="내 볼륨">
-            </div>
-          </div>
-        </div>
-        <p id="volume-status" class="note tv-status" role="status" aria-live="polite"></p>
-      </section>
-
-      <p id="listener-note" class="listener-note hidden">
-        재생은 <b>DJ가 맞춥니다</b>. 지금 나오는 곡만 화면에 보여요.<br>
-        내 소리 크기는 아래 <b>내 볼륨</b>에서 조절하세요.
-      </p>
-
-      <section id="playlist-section" class="face" aria-labelledby="playlist-title">
-        <div class="plate">queue — 대기열<span class="code"><span id="queue-count">00</span>곡</span></div>
-        <div class="body">
-          <h2 id="playlist-title" class="sr-only">대기열</h2>
-
-          <ul id="track-list" aria-live="polite"></ul>
-        </div>
-      </section>
+        </section>
       </div>
+    </div>
 
-      <section id="library-section" class="face" aria-labelledby="library-title">
-        <div class="plate">내 재생목록</div>
-        <h2 id="library-title" class="sr-only">내 재생목록</h2>
-        <div class="lib">
-          <div class="lib-search">
-            <div class="addrow">
-              <input id="track-search-input" class="field" type="text" placeholder="유튜브 링크 또는 곡 제목" aria-label="유튜브 링크 또는 곡 제목으로 검색" aria-describedby="track-search-status">
-              <button id="track-search-button" class="key" type="button">검색</button>
-            </div>
-            <ul id="track-search-results" class="finds" aria-live="polite"></ul>
-            <p id="track-search-status" class="note" role="status" aria-live="polite"></p>
-          </div>
-
-          <div class="lib-side">
-            <div class="lib-side-body">
-              <p id="playlist-manager-status" class="note" role="status" aria-live="polite"></p>
-              <ul id="playlist-list" aria-live="polite"></ul>
-            </div>
-            <div class="lib-side-foot">
-              <button id="new-playlist-button" class="key new-pl" type="button" aria-haspopup="dialog">＋ 새 재생 목록</button>
-            </div>
-          </div>
-
-        </div>
-      </section>
+    <div class="statusbar">
+      <span class="st grow">같은 지점에서 함께 재생</span>
+      <span class="st" id="volume-status" role="status" aria-live="polite"></span>
+      <span class="st">sugardjmusic.kr</span>
     </div>
   </main>
 
@@ -279,6 +331,6 @@
     };
   </script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script type="module" src="js/main.js?v=20260820-savemodal"></script>
+  <script type="module" src="js/main.js?v=20260821-y2k"></script>
 </body>
 </html>

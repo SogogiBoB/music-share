@@ -1,0 +1,481 @@
+<title>SUGAR DJ 7.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;500;700;800&family=Silkscreen:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 하늘 — 버디버디 로그인 */
+  --sky-1:#5fb3e6; --sky-2:#a8dcf5; --sky-3:#e4f5ff;
+  /* 크롬 — Windows 95 */
+  --chrome:#d8d4cc; --chrome-lt:#ffffff; --chrome-hi:#efece6;
+  --chrome-dk:#8a867e; --chrome-dkr:#26241f;
+  /* 타이틀 — NATE 문자 딥블루 */
+  --title-1:#153e8f; --title-2:#5aa9e0;
+  --sky-lt:#bfe4fa; --sky-dk:#1a5a96;   /* 스타바·레일 */
+  /* 초록 — 버디버디 7.0 메신저 */
+  --grass:#6bb92c; --grass-dk:#3f7a13; --grass-lt:#c7ea9a;
+  /* LCD 인광 */
+  --lcd:#16281a; --lcd-ink:#8ef29a; --lcd-dim:#3f8a4c;
+  /* LED — 지뢰찾기 카운터 */
+  --led:#ff3b2f; --led-bg:#150807;
+  /* 브랜드 — sugar */
+  --candy:#ff5fa2;
+  --ink:#1a1814; --ink-2:#55504a;
+  --sel:#0a2a8c;
+
+  --kr:'Gothic A1','Dotum','돋움','Apple SD Gothic Neo',Tahoma,sans-serif;
+  --px:'Silkscreen','Courier New',monospace;
+  --seg:'VT323','Courier New',monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; min-height:100vh; padding:18px 18px 54px;
+  font-family:var(--kr); font-size:13px; color:var(--ink);
+  background:linear-gradient(180deg,var(--sky-1) 0%,var(--sky-2) 46%,var(--sky-3) 100%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:none;
+}
+/* ---- 도트 구름 (마리오 하늘) ---- */
+.sky{position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden}
+.cl{position:absolute; shape-rendering:crispEdges; filter:drop-shadow(0 3px 0 rgba(30,80,140,.09))}
+.c1{width:196px; top:6%;  left:-2%;  animation:drift 210s linear infinite}
+.c2{width:120px; top:16%; left:22%;  animation:drift 280s linear infinite}
+.c3{width:252px; top:2%;  left:56%;  animation:drift 230s linear infinite}
+.c4{width:140px; top:27%; left:90%;  animation:drift 320s linear infinite}
+.c5{width:104px; top:47%; left:1%;   animation:drift 360s linear infinite}
+.c6{width:176px; top:58%; left:88%;  animation:drift 250s linear infinite}
+.c7{width:116px; top:75%; left:14%;  animation:drift 300s linear infinite}
+.c8{width:220px; top:84%; left:60%;  animation:drift 270s linear infinite}
+.c9{width:132px; top:36%; left:44%;  animation:drift 340s linear infinite}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(calc(100vw + 320px))}}
+
+/* ---- Win95 베벨 ---- */
+.out{box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+.in{box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+
+/* ---- 창 ---- */
+.win{
+  position:relative; z-index:1;
+  width:min(1180px,100%); margin:0 auto; padding:3px;
+  background:var(--chrome);
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),
+             inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi),
+             4px 4px 0 rgba(10,30,60,.22);
+}
+.titlebar{
+  display:flex; align-items:center; gap:8px; height:26px; padding:0 3px 0 5px;
+  background:linear-gradient(90deg,var(--title-1),var(--title-2));
+  color:#fff;
+}
+.titlebar .star{color:var(--candy); font-size:14px; text-shadow:0 0 4px rgba(255,95,162,.8)}
+.title-txt{font-family:var(--px); font-size:12px; letter-spacing:.02em}
+.title-sub{font-size:11px; font-weight:500; opacity:.86; margin-left:2px}
+.title-sp{flex:1}
+.tbtn{
+  width:19px; height:17px; margin-left:2px; padding:0; border:0; cursor:pointer;
+  background:var(--chrome); color:var(--ink); font:700 10px/1 var(--kr);
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi);
+}
+.tbtn.x{background:linear-gradient(180deg,#f0745c,#c8331c); color:#fff}
+.tbtn:active{box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset 2px 2px 0 var(--chrome-dk)}
+
+/* ---- 메뉴바 ---- */
+.menubar{display:flex; gap:2px; padding:3px 2px; background:var(--chrome); border-bottom:1px solid #bfbbb3}
+.menubar span{padding:2px 7px; cursor:default}
+.menubar span:hover{background:var(--sel); color:#fff}
+.menubar u{text-decoration:underline}
+
+/* ---- 스타바 (버디 7.0 상단 줄) ---- */
+.starbar{
+  display:flex; align-items:center; gap:8px; padding:5px 8px;
+  background:linear-gradient(180deg,#f0faff,var(--sky-lt));
+  border-top:1px solid #fff; border-bottom:1px solid #7fb6dd;
+}
+.room{font-weight:700; color:var(--sky-dk)}
+.room b{color:var(--ink)}
+.starbar .sp{flex:1}
+.pilot{
+  display:inline-flex; align-items:center; gap:5px; padding:2px 8px 2px 6px;
+  background:#fff; font-family:var(--px); font-size:10px; color:#8a2350;
+  box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi);
+}
+.pilot i{width:7px; height:7px; border-radius:50%; background:var(--candy); box-shadow:0 0 5px var(--candy); animation:blip 1.6s steps(1,end) infinite}
+@keyframes blip{0%,60%{opacity:1}61%,100%{opacity:.25}}
+.btn{
+  padding:4px 12px; border:0; cursor:pointer; background:var(--chrome);
+  font:500 12px/1.35 var(--kr); color:var(--ink);
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi);
+}
+.btn:active{box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset 2px 2px 0 var(--chrome-dk); padding:5px 11px 3px 13px}
+.btn:focus-visible{outline:1px dotted var(--ink); outline-offset:-4px}
+.btn.go{background:linear-gradient(180deg,#8fd44c,var(--grass)); color:#fff; font-weight:700; text-shadow:0 1px 0 rgba(0,0,0,.35)}
+.btn.dj{font-weight:700; color:#8a2350}
+
+/* ---- 본문 3분할 (NATE 문자) ---- */
+.body{display:grid; grid-template-columns:52px minmax(0,1fr) 272px; gap:6px; padding:7px; background:var(--chrome)}
+
+/* 아이콘 레일 (버디버디 글로시) */
+.rail{display:flex; flex-direction:column; align-items:center; gap:9px; padding:8px 0; background:linear-gradient(180deg,#e6f5ff,#bfdff5); box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+.orb{
+  width:34px; height:34px; border:1px solid #4e8f1c; border-radius:50%; cursor:pointer; padding:0;
+  background:radial-gradient(circle at 34% 26%,#eafcd6 6%,#9ade5a 42%,var(--grass) 70%,#3f7a13 100%);
+  color:#fff; font-size:15px; line-height:1; text-shadow:0 1px 1px rgba(0,0,0,.45);
+  box-shadow:0 2px 3px rgba(30,60,20,.35), inset 0 -3px 5px rgba(0,60,0,.3);
+}
+.orb.on{border-color:#a8266b; background:radial-gradient(circle at 34% 26%,#ffe6f1 6%,#ff9cc6 42%,var(--candy) 70%,#c22a6c 100%)}
+.orb:focus-visible{outline:2px solid var(--sel); outline-offset:2px}
+
+/* ---- 데크 (신호) ---- */
+.deck{display:grid; grid-template-columns:214px minmax(0,1fr); gap:7px; margin-bottom:6px}
+.device{
+  padding:9px 9px 11px; border-radius:12px 12px 20px 20px;
+  background:linear-gradient(160deg,#fdfdfd,#c8d6e2 46%,#93a9bd);
+  box-shadow:inset 0 1px 0 #fff, inset -2px -2px 4px rgba(30,50,70,.35), 2px 3px 0 rgba(20,40,70,.2);
+  border:1px solid #7d93a8;
+}
+.device .brand{display:flex; justify-content:space-between; align-items:center; font-family:var(--px); font-size:9px; color:#38536c; margin-bottom:7px}
+.lcd{
+  position:relative; overflow:hidden; padding:8px 9px 9px; border-radius:3px;
+  background:linear-gradient(180deg,#1d3524,var(--lcd));
+  box-shadow:inset 0 0 0 2px #0c1710, inset 0 2px 8px rgba(0,0,0,.8), 0 0 0 1px #93a9bd;
+  color:var(--lcd-ink); text-shadow:0 0 5px rgba(142,242,154,.55);
+}
+.lcd::after{content:''; position:absolute; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+.lcd-top{display:flex; justify-content:space-between; font-family:var(--px); font-size:8px; color:var(--lcd-dim); margin-bottom:5px}
+.lcd-top .rec{color:var(--led); text-shadow:0 0 6px rgba(255,59,47,.8)}
+.marquee{overflow:hidden; white-space:nowrap; margin-bottom:2px}
+.marquee span{display:inline-block; padding-right:44px; font-weight:700; font-size:15px; animation:slide 11s linear infinite}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.lcd-artist{font-size:11px; color:var(--lcd-dim); margin:0 0 7px}
+.lcd-time{display:flex; justify-content:space-between; font-family:var(--seg); font-size:21px; line-height:1}
+.bar{position:relative; height:7px; margin-top:6px; background:#0d1a11; box-shadow:inset 0 0 0 1px #37543d}
+.bar i{position:absolute; inset:1px auto 1px 1px; width:31%; background:repeating-linear-gradient(90deg,var(--lcd-ink) 0 3px,transparent 3px 5px)}
+.lcd-foot{display:flex; justify-content:space-between; margin-top:7px; font-family:var(--px); font-size:8px; color:var(--lcd-dim)}
+/* 사운드 레코더 트랜스포트 */
+.transport{display:flex; gap:4px; justify-content:center; margin-top:10px}
+.tk{width:33px; height:23px; border:0; cursor:pointer; background:var(--chrome); font-size:11px; color:var(--ink);
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+.tk:active{box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset 2px 2px 0 var(--chrome-dk)}
+.tk.main{width:46px; color:#1c6b18; font-size:13px}
+.tk.rec{color:#b0231a}
+
+/* 데크 오른쪽 — 믹서 */
+.mixer{padding:9px 11px; background:var(--chrome); box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+.cap{font-family:var(--px); font-size:9px; color:var(--ink-2); margin-bottom:6px}
+.vol{display:grid; grid-template-columns:60px 22px 1fr 34px; align-items:center; gap:7px; margin-bottom:8px}
+.vol-name{font-family:var(--px); font-size:9px}
+.mute{width:22px; height:20px; border:0; cursor:pointer; background:var(--chrome); font-size:11px;
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:16px; background:transparent; margin:0}
+input[type=range]::-webkit-slider-runnable-track{height:6px; background:#a9a59d; box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:12px; height:20px; margin-top:-7px; background:var(--chrome);
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+input[type=range]::-moz-range-track{height:6px; background:#a9a59d}
+input[type=range]::-moz-range-thumb{width:12px; height:20px; border:0; border-radius:0; background:var(--chrome); box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt)}
+input[type=range]:focus-visible{outline:1px dotted var(--ink)}
+.pct{font-family:var(--seg); font-size:17px; text-align:right; color:#2b2822}
+.meter{display:flex; gap:2px; margin-top:2px; padding:4px 5px; background:var(--led-bg); box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset 2px 2px 0 var(--chrome-dk)}
+.meter i{flex:1; height:9px; background:#2b3a24}
+.meter i.a{background:#63d63a; box-shadow:0 0 5px rgba(99,214,58,.7)}
+.meter i.b{background:#e6d02a; box-shadow:0 0 5px rgba(230,208,42,.7)}
+.meter i.c{background:var(--led); box-shadow:0 0 6px rgba(255,59,47,.8)}
+/* 반응 팔레트 (NATE 특수문자 격자) */
+.react{display:flex; flex-wrap:wrap; gap:3px; margin-top:10px}
+.react button{width:24px; height:22px; border:0; cursor:pointer; background:#fff; font-size:12px; color:#3a3630;
+  box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+.react button:hover{background:var(--grass-lt)}
+
+/* ---- 패널 공통 ---- */
+.panel{background:var(--chrome); box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+.phead{display:flex; align-items:center; gap:6px; padding:3px 6px; background:linear-gradient(90deg,var(--title-1),var(--title-2)); color:#fff; font-size:11px; font-weight:700}
+.phead .en{font-family:var(--px); font-size:9px; opacity:.8; font-weight:400}
+.phead .sp{flex:1}
+.pbody{padding:5px; background:#fff; margin:3px; box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+
+/* LED 카운터 (지뢰찾기) */
+.led{position:relative; padding:1px 4px; background:var(--led-bg); font-family:var(--seg); font-size:17px; line-height:1.1; color:var(--led); text-shadow:0 0 6px rgba(255,59,47,.75); box-shadow:inset 1px 1px 0 #000, inset -1px -1px 0 #6b6660}
+.led .ghost{position:absolute; left:4px; top:1px; opacity:.14}
+
+/* 대기열 리스트 */
+.qcols,.qrow{display:grid; grid-template-columns:26px 1fr 92px 46px 26px; align-items:center; gap:6px}
+.qcols{padding:2px 4px; font-size:11px; color:var(--ink-2); background:var(--chrome); margin:0 0 3px;
+  box-shadow:inset -1px -1px 0 var(--chrome-dk),inset 1px 1px 0 var(--chrome-lt)}
+.qlist{list-style:none; margin:0; padding:0; height:186px; overflow:auto}
+.qrow{padding:3px 4px; cursor:default}
+.qrow .n{font-family:var(--seg); font-size:15px; color:#7a756e; text-align:center}
+.qrow .t{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.qrow .who{font-size:11px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.qrow .d{font-family:var(--seg); font-size:15px; color:#7a756e; text-align:right}
+.qrow .save{width:20px; height:18px; border:0; cursor:pointer; background:var(--chrome); font-size:10px;
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+.qrow.now{background:var(--sel); color:#fff}
+.qrow.now .n,.qrow.now .who,.qrow.now .d{color:#b9cbff}
+.qrow:not(.now):hover{background:#e8eefc}
+
+/* 우측 사이드바 */
+.side{display:flex; flex-direction:column; gap:6px}
+.people{list-style:none; margin:0; padding:0; max-height:104px; overflow:auto}
+.people li{display:flex; align-items:center; gap:6px; padding:2px 3px}
+.dot{width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 32% 30%,#dcffb4,var(--grass) 70%,#2f6a0a); flex:0 0 auto}
+.dot.idle{background:radial-gradient(circle at 32% 30%,#fff0c4,#e2a51f 70%,#8a5f04)}
+.people .tag{margin-left:auto; font-family:var(--px); font-size:8px; color:#8a2350}
+/* 아코디언 */
+.acc{list-style:none; margin:0; padding:0}
+.acc>li{margin-bottom:2px}
+.acc summary{display:flex; align-items:center; gap:5px; padding:3px 5px; cursor:pointer; background:linear-gradient(180deg,#fbfefa,#e3f2d4); list-style:none;
+  box-shadow:inset -1px -1px 0 var(--chrome-dk),inset 1px 1px 0 var(--chrome-lt)}
+.acc summary::-webkit-details-marker{display:none}
+.acc summary .cnt{margin-left:auto; font-family:var(--seg); font-size:14px; color:var(--ink-2)}
+.acc summary .tri{font-size:9px; color:var(--grass-dk)}
+.acc ul{list-style:none; margin:0; padding:3px 5px 5px 16px}
+.acc ul li{padding:2px 0; font-size:12px; color:#3d3932; display:flex; gap:6px}
+.acc ul li span{margin-left:auto; font-family:var(--seg); font-size:14px; color:#8d8880}
+details[open] summary .tri{transform:rotate(90deg)}
+.tri{display:inline-block; transition:transform .12s}
+/* 검색 */
+.searchrow{display:flex; gap:4px; padding:5px; background:var(--chrome)}
+.fld{flex:1; min-width:0; padding:3px 5px; border:0; background:#fff; font:400 12px var(--kr);
+  box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+.fld:focus{outline:1px dotted var(--sel); outline-offset:-3px}
+.hint{padding:0 5px 5px; font-size:11px; color:var(--ink-2)}
+
+/* ---- 상태바 ---- */
+.statusbar{display:flex; gap:3px; padding:3px; background:var(--chrome)}
+.st{padding:2px 7px; font-size:11px; color:#3d3932; box-shadow:inset 1px 1px 0 var(--chrome-dk),inset -1px -1px 0 var(--chrome-lt)}
+.st.grow{flex:1}
+.st .seg{font-family:var(--seg); font-size:14px; color:#1c1a16}
+
+/* ---- 떠 있는 알림창 (버디버디 모달) ---- */
+.dialog{position:fixed; left:50%; top:34%; transform:translate(-50%,-50%); width:min(324px,88vw); padding:3px; background:var(--chrome); z-index:40;
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi), 5px 6px 0 rgba(10,30,60,.28)}
+.dialog .titlebar{background:linear-gradient(90deg,#c8341f,#f08a6a)}
+.dlg-body{display:flex; align-items:center; gap:12px; padding:18px 16px 12px; background:linear-gradient(180deg,#f7fbff,#dceefa)}
+.dlg-body .ico{font-size:26px; filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+.dlg-body p{margin:0; font-size:13px; line-height:1.55}
+.dlg-body b{color:#8a2350}
+.dlg-foot{display:flex; justify-content:center; padding:0 0 14px; background:linear-gradient(180deg,#dceefa,#cfe6f7)}
+.dlg-foot .btn{min-width:86px; font-weight:700; outline:1px solid #8a2350; outline-offset:1px}
+
+/* ---- 작업표시줄 ---- */
+.taskbar{position:fixed; left:0; right:0; bottom:0; display:flex; align-items:center; gap:4px; height:32px; padding:3px 4px; background:var(--chrome); z-index:50;
+  box-shadow:inset 0 1px 0 var(--chrome-lt),inset 0 2px 0 var(--chrome-hi), 0 -1px 0 var(--chrome-dk)}
+.start{display:flex; align-items:center; gap:5px; padding:3px 9px 3px 6px; border:0; cursor:pointer; background:var(--chrome); font:700 12px var(--kr);
+  box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+.start .s{color:var(--candy); font-size:14px}
+.tasks{display:flex; gap:3px; flex:1; min-width:0}
+.task{display:flex; align-items:center; gap:5px; min-width:0; max-width:190px; padding:3px 9px; font-size:12px; background:var(--chrome);
+  box-shadow:inset 1px 1px 0 var(--chrome-dkr),inset -1px -1px 0 var(--chrome-lt),inset 2px 2px 0 var(--chrome-dk),inset -2px -2px 0 var(--chrome-hi)}
+.task span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.task.idle{box-shadow:inset -1px -1px 0 var(--chrome-dkr),inset 1px 1px 0 var(--chrome-lt),inset -2px -2px 0 var(--chrome-dk),inset 2px 2px 0 var(--chrome-hi)}
+.tray{display:flex; align-items:center; gap:7px; padding:3px 9px; box-shadow:inset 1px 1px 0 var(--chrome-dk),inset -1px -1px 0 var(--chrome-lt)}
+.tray .clock{font-family:var(--seg); font-size:16px; line-height:1}
+
+@media (max-width:940px){
+  body{padding:10px 10px 46px}
+  .body{grid-template-columns:1fr}
+  .rail{flex-direction:row; justify-content:flex-start; padding:6px 8px}
+  .deck{grid-template-columns:1fr}
+  .device{max-width:260px}
+  .side{order:3}
+}
+@media (prefers-reduced-motion:reduce){
+  .marquee span,.pilot i,.cl{animation:none}
+  .marquee span{padding-right:0}
+}
+</style>
+
+<div class="sky" aria-hidden="true">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="cl-a" viewBox="0 0 26 12">
+<g fill="#4a79c4"><rect x="11" y="0" width="4" height="1"/><rect x="9" y="1" width="2" height="1"/><rect x="15" y="1" width="2" height="1"/><rect x="5" y="2" width="2" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="17" y="2" width="1" height="1"/><rect x="19" y="2" width="2" height="1"/><rect x="3" y="3" width="2" height="1"/><rect x="7" y="3" width="2" height="1"/><rect x="17" y="3" width="2" height="1"/><rect x="21" y="3" width="2" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="23" y="4" width="1" height="1"/><rect x="1" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="25" y="6" width="1" height="1"/><rect x="0" y="7" width="1" height="1"/><rect x="25" y="7" width="1" height="1"/><rect x="0" y="8" width="1" height="1"/><rect x="25" y="8" width="1" height="1"/><rect x="0" y="9" width="1" height="1"/><rect x="25" y="9" width="1" height="1"/><rect x="0" y="10" width="1" height="1"/><rect x="25" y="10" width="1" height="1"/><rect x="1" y="11" width="24" height="1"/></g>
+<g fill="#ffffff"><rect x="11" y="1" width="4" height="1"/><rect x="9" y="2" width="8" height="1"/><rect x="5" y="3" width="2" height="1"/><rect x="9" y="3" width="8" height="1"/><rect x="19" y="3" width="2" height="1"/><rect x="3" y="4" width="20" height="1"/><rect x="2" y="5" width="22" height="1"/><rect x="1" y="6" width="24" height="1"/><rect x="1" y="7" width="6" height="1"/><rect x="9" y="7" width="8" height="1"/><rect x="19" y="7" width="6" height="1"/><rect x="1" y="8" width="6" height="1"/><rect x="9" y="8" width="8" height="1"/><rect x="19" y="8" width="6" height="1"/></g>
+<g fill="#a8cdf0"><rect x="7" y="7" width="2" height="1"/><rect x="17" y="7" width="2" height="1"/><rect x="7" y="8" width="2" height="1"/><rect x="17" y="8" width="2" height="1"/><rect x="1" y="9" width="24" height="1"/><rect x="1" y="10" width="24" height="1"/></g>
+</symbol>
+<symbol id="cl-b" viewBox="0 0 18 8">
+<g fill="#4a79c4"><rect x="9" y="0" width="4" height="1"/><rect x="4" y="1" width="2" height="1"/><rect x="8" y="1" width="1" height="1"/><rect x="13" y="1" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="6" y="2" width="2" height="1"/><rect x="14" y="2" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="15" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="16" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="17" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="17" y="6" width="1" height="1"/><rect x="1" y="7" width="16" height="1"/></g>
+<g fill="#ffffff"><rect x="9" y="1" width="4" height="1"/><rect x="4" y="2" width="2" height="1"/><rect x="8" y="2" width="6" height="1"/><rect x="3" y="3" width="12" height="1"/><rect x="2" y="4" width="14" height="1"/></g>
+<g fill="#a8cdf0"><rect x="1" y="5" width="16" height="1"/><rect x="1" y="6" width="16" height="1"/></g>
+</symbol>
+  </defs></svg>
+  <svg class="cl c1" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+  <svg class="cl c2" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+  <svg class="cl c3" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+  <svg class="cl c4" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+  <svg class="cl c5" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+  <svg class="cl c6" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+  <svg class="cl c8" viewBox="0 0 26 12"><use href="#cl-a" width="26" height="12"/></svg>
+  <svg class="cl c9" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+  <svg class="cl c7" viewBox="0 0 18 8"><use href="#cl-b" width="18" height="8"/></svg>
+</div>
+
+<main class="win">
+  <div class="titlebar">
+    <span class="star">★</span>
+    <span class="title-txt">SUGAR DJ 7.0</span>
+    <span class="title-sub">— 202호 · 야근하는 사람들</span>
+    <span class="title-sp"></span>
+    <button class="tbtn" aria-label="최소화">_</button>
+    <button class="tbtn" aria-label="최대화">□</button>
+    <button class="tbtn x" aria-label="닫기">✕</button>
+  </div>
+
+  <nav class="menubar">
+    <span><u>파</u>일(F)</span><span><u>방</u>(R)</span><span><u>재</u>생(P)</span><span><u>보</u>기(V)</span><span>도<u>움</u>말(H)</span>
+  </nav>
+
+  <div class="starbar">
+    <span class="room">★ 지금 DJ — <b>준현</b></span>
+    <span class="pilot"><i></i> ON AIR</span>
+    <span class="sp"></span>
+    <button class="btn dj">DJ 넘겨받기</button>
+    <button class="btn">방 나가기</button>
+  </div>
+
+  <div class="body">
+    <div class="rail">
+      <button class="orb on" title="지금 재생" aria-label="지금 재생">♪</button>
+      <button class="orb" title="대기열" aria-label="대기열">≡</button>
+      <button class="orb" title="내 재생목록" aria-label="내 재생목록">◎</button>
+      <button class="orb" title="접속자" aria-label="접속자">☺</button>
+    </div>
+
+    <div>
+      <div class="deck">
+        <div class="device">
+          <div class="brand"><span>SUGAR·DJ</span><span>SYNC</span></div>
+          <div class="lcd">
+            <div class="lcd-top"><span>▶ PLAY</span><span class="rec">● LIVE</span></div>
+            <div class="marquee"><span>검정치마 — 강아지　▪　검정치마 — 강아지　▪　</span></div>
+            <p class="lcd-artist">올린 사람 · 지수</p>
+            <div class="lcd-time"><span>00:42</span><span>-03:16</span></div>
+            <div class="bar"><i></i></div>
+            <div class="lcd-foot"><span>QUEUE 03 / 12</span><span>320kbps</span></div>
+          </div>
+          <div class="transport">
+            <button class="tk" aria-label="이전 곡">◀◀</button>
+            <button class="tk main" aria-label="일시정지">❚❚</button>
+            <button class="tk" aria-label="다음 곡">▶▶</button>
+            <button class="tk rec" aria-label="반복">↻</button>
+          </div>
+        </div>
+
+        <div class="mixer">
+          <p class="cap">OUTPUT LEVEL</p>
+          <div class="vol">
+            <span class="vol-name">MASTER</span>
+            <button class="mute" aria-label="마스터 음소거">🔊</button>
+            <input type="range" min="0" max="100" value="78" aria-label="마스터 볼륨">
+            <span class="pct">78</span>
+          </div>
+          <div class="vol">
+            <span class="vol-name">MY SET</span>
+            <button class="mute" aria-label="내 볼륨 음소거">🔊</button>
+            <input type="range" min="0" max="100" value="55" aria-label="내 볼륨">
+            <span class="pct">55</span>
+          </div>
+          <div class="meter" aria-hidden="true">
+            <i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i><i class="a"></i>
+            <i class="a"></i><i class="b"></i><i class="b"></i><i class="c"></i><i></i><i></i><i></i>
+          </div>
+          <p class="cap" style="margin:11px 0 0">REACTION — 방에 보내기</p>
+          <div class="react">
+            <button aria-label="좋아요">♥</button><button aria-label="별">★</button><button aria-label="음표">♪</button>
+            <button aria-label="웃음">☺</button><button aria-label="불">✦</button><button aria-label="박수">✧</button>
+            <button aria-label="눈물">☂</button><button aria-label="달">☾</button><button aria-label="눈">❄</button><button aria-label="해">☀</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel">
+        <div class="phead"><span>대기열</span><span class="en">QUEUE</span><span class="sp"></span>
+          <span class="led"><span class="ghost">888</span>012</span></div>
+        <div class="pbody">
+          <div class="qcols"><span>#</span><span>곡</span><span>올린 사람</span><span>길이</span><span></span></div>
+          <ul class="qlist">
+            <li class="qrow now"><span class="n">03</span><span class="t">검정치마 — 강아지</span><span class="who">지수</span><span class="d">3:58</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+            <li class="qrow"><span class="n">04</span><span class="t">새소년 — 난춘</span><span class="who">준현</span><span class="d">4:12</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+            <li class="qrow"><span class="n">05</span><span class="t">잔나비 — 주저하는 연인들을 위해</span><span class="who">민서</span><span class="d">5:03</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+            <li class="qrow"><span class="n">06</span><span class="t">아이유 — 밤편지</span><span class="who">지수</span><span class="d">4:20</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+            <li class="qrow"><span class="n">07</span><span class="t">브로콜리너마저 — 보편적인 노래</span><span class="who">태윤</span><span class="d">4:47</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+            <li class="qrow"><span class="n">08</span><span class="t">혁오 — TOMBOY</span><span class="who">민서</span><span class="d">3:34</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+            <li class="qrow"><span class="n">09</span><span class="t">이무진 — 신호등</span><span class="who">게스트02</span><span class="d">4:01</span><button class="save" aria-label="내 재생목록에 저장">＋</button></li>
+          </ul>
+        </div>
+      </section>
+    </div>
+
+    <div class="side">
+      <section class="panel">
+        <div class="phead"><span>같이 듣는 중</span><span class="sp"></span>
+          <span class="led"><span class="ghost">888</span>005</span></div>
+        <div class="pbody">
+          <ul class="people">
+            <li><span class="dot"></span>준현<span class="tag">DJ</span></li>
+            <li><span class="dot"></span>지수</li>
+            <li><span class="dot"></span>민서</li>
+            <li><span class="dot idle"></span>태윤<span class="tag">자리비움</span></li>
+            <li><span class="dot"></span>게스트02<span class="tag">게스트</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="phead"><span>내 재생목록</span><span class="en">MY LIST</span></div>
+        <div class="pbody">
+          <ul class="acc">
+            <li><details open><summary><span class="tri">▶</span>야근용<span class="cnt">12</span></summary>
+              <ul><li>새소년 — 난춘<span>4:12</span></li><li>검정치마 — 강아지<span>3:58</span></li><li>혁오 — TOMBOY<span>3:34</span></li></ul>
+            </details></li>
+            <li><details><summary><span class="tri">▶</span>새벽 드라이브<span class="cnt">08</span></summary>
+              <ul><li>아이유 — 밤편지<span>4:20</span></li></ul>
+            </details></li>
+            <li><details><summary><span class="tri">▶</span>2004년 감성<span class="cnt">23</span></summary>
+              <ul><li>브라운 아이즈 — 벌써 일년<span>4:38</span></li></ul>
+            </details></li>
+          </ul>
+        </div>
+        <div class="searchrow" style="padding-top:0">
+          <button class="btn" style="width:100%">＋ 새 재생목록</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="phead"><span>곡 찾기</span><span class="en">SEARCH</span></div>
+        <div class="searchrow">
+          <input class="fld" type="text" placeholder="유튜브 링크 또는 곡 제목" aria-label="유튜브 링크 또는 곡 제목">
+          <button class="btn go">GO</button>
+        </div>
+        <p class="hint">찾은 곡은 대기열 맨 뒤에 붙습니다.</p>
+      </section>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <span class="st">SYNC LOCK · 지연 <span class="seg">0.3</span>초</span>
+    <span class="st">온에어 <span class="seg">01:12:40</span></span>
+    <span class="st grow">대기열 7곡 남음 — 다음은 새소년 「난춘」</span>
+    <span class="st">sugardjmusic.kr</span>
+  </div>
+</main>
+
+<div class="dialog" role="dialog" aria-labelledby="dlg-t">
+  <div class="titlebar">
+    <span class="star">★</span><span class="title-txt" id="dlg-t">SUGAR DJ</span>
+    <span class="title-sp"></span><button class="tbtn x" aria-label="닫기">✕</button>
+  </div>
+  <div class="dlg-body">
+    <span class="ico" aria-hidden="true">⚠️</span>
+    <p>지금부터 이 방의 <b>DJ</b>입니다.<br>다음 곡을 고르면 모두에게 같이 재생됩니다.</p>
+  </div>
+  <div class="dlg-foot"><button class="btn">확인</button></div>
+</div>
+
+<div class="taskbar">
+  <button class="start"><span class="s">★</span>시작</button>
+  <div class="tasks">
+    <span class="task"><span>♪ SUGAR DJ 7.0 — 202호</span></span>
+    <span class="task idle"><span>♫ 곡 찾기</span></span>
+  </div>
+  <div class="tray"><span aria-hidden="true">🔊</span><span aria-hidden="true">📻</span><span class="clock">23:41</span></div>
+</div>

@@ -25,9 +25,24 @@ const ICON_LIST_ADD = `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">
   <path d="M4 7h12M4 12h9M4 17h7"/><path d="M17.5 13v7M14 16.5h7"/>
 </svg>`;
 
-// 곡 제목이 브라운관 폭보다 길면 재생 중에만 왼쪽으로 흘려서 뒷부분까지 보여준다.
-// 넘치는 폭(--marq-shift)과 이동 시간(--marq-dur)은 실제 렌더 크기로 계산한다.
-const MARQUEE_SPEED_PX_PER_SEC = 55;
+// 곡 제목이 화면 폭보다 길면 재생 중에만 왼쪽으로 흘려서 뒷부분까지 보여준다.
+// 한 바퀴: 앞에서 2초 정지 → 왼쪽으로 등속 이동 → 끝에서 2초 정지 → 맨 앞으로 순간이동.
+// 정지 구간이 곡 길이와 무관하게 2초로 고정이어야 하므로 keyframes 지점을 매번 다시 만든다.
+const MARQUEE_SPEED_PX_PER_SEC = 44;
+const MARQUEE_HOLD_SEC = 2;
+
+// 정지/이동 비율이 제목마다 달라지므로 @keyframes 를 런타임에 다시 쓴다.
+function writeMarqueeKeyframes(holdStartPercent, moveEndPercent) {
+  let style = document.getElementById("marq-keyframes");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "marq-keyframes";
+    document.head.appendChild(style);
+  }
+  style.textContent = `@keyframes marq{`
+    + `0%,${holdStartPercent.toFixed(2)}%{transform:translateX(0)}`
+    + `${moveEndPercent.toFixed(2)}%,100%{transform:translateX(var(--marq-shift,0))}}`;
+}
 
 function updateTitleMarquee() {
   const nowTitle = document.getElementById("now-title");
@@ -38,10 +53,14 @@ function updateTitleMarquee() {
   const overflow = inner.scrollWidth - nowTitle.clientWidth;
   if (overflow <= 4) return;
 
-  // 양끝에서 잠깐 멈추므로 왕복 시간에 여유(2.4초)를 더한다.
-  const travel = (overflow / MARQUEE_SPEED_PX_PER_SEC) * 2 + 2.4;
+  const moveSec = overflow / MARQUEE_SPEED_PX_PER_SEC;
+  const travel = moveSec + MARQUEE_HOLD_SEC * 2;
+  writeMarqueeKeyframes(
+    (MARQUEE_HOLD_SEC / travel) * 100,
+    ((MARQUEE_HOLD_SEC + moveSec) / travel) * 100,
+  );
   nowTitle.style.setProperty("--marq-shift", `${-overflow}px`);
-  nowTitle.style.setProperty("--marq-dur", `${travel.toFixed(1)}s`);
+  nowTitle.style.setProperty("--marq-dur", `${travel.toFixed(2)}s`);
   nowTitle.classList.add("is-marquee");
 }
 
@@ -160,7 +179,7 @@ function renderTracks(tracks, amDj, currentTrackId, saveToPlaylist = null) {
       cue.type = "button";
       cue.className = "cue";
       cue.setAttribute("aria-label", `${t.title} 재생`);
-      cue.textContent = isLive ? "재생 중" : "cue";
+      cue.textContent = isLive ? "재생 중" : "재생";
       cue.addEventListener("click", async (event) => {
         event.stopPropagation();
         cue.disabled = true;
@@ -273,6 +292,9 @@ async function bootstrap() {
     if (locked !== undefined) el.classList.toggle("is-locked", locked);
     // 슬라이더 트랙의 채워진 구간은 CSS 변수로 그린다.
     el.style.setProperty("--v", `${muted ? 0 : value}%`);
+    // LED 숫자 표시(음소거면 0).
+    const pct = el.querySelector(".pct");
+    if (pct) pct.textContent = String(muted ? 0 : value);
   }
 
   function renderVolume(view) {

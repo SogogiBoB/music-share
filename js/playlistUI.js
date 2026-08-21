@@ -46,7 +46,7 @@ export function initPlaylistUI({ ownerUid, amDj = false, uid = ownerUid }) {
 
       const bk = document.createElement("span");
       bk.className = "bk";
-      bk.textContent = String.fromCharCode(97 + index);
+      bk.textContent = String(index + 1).padStart(2, "0");
 
       const bn = document.createElement("span");
       bn.className = "bn";
